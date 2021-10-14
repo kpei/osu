@@ -144,10 +144,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (osuPrevObj != null && strainTime < greatWindowFull && osuPrevObj.StrainTime > strainTime)
                 strainTime = Interpolation.Lerp(osuPrevObj.StrainTime, strainTime, speedWindowRatio);
 
-            // Cap deltatime to the OD 300 hitwindow.
-            // 0.93 is derived from making sure 260bpm OD8 streams aren't nerfed harshly, whilst 0.92 limits the effect of the cap.
-            strainTime /= Math.Clamp((strainTime / greatWindowFull) / 0.93, 0.92, 1);
-
             // derive speedBonus for calculation
             double speedBonus = 1.0;
 
