@@ -170,12 +170,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             }
 
             // Scale the speed value with accuracy and OD.
-            double deviation = getDeviation();
+            double? deviation = getDeviation();
 
-            if (double.IsNaN(deviation))
+            if (deviation == null)
                 speedValue *= 0;
             else
-                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(13 / (Math.Sqrt(2) * getDeviation()));
+                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(13 / (Math.Sqrt(2) * (double)deviation));
 
             // Scale the speed value with # of 50s to punish doubletapping.
             speedValue *= Math.Pow(0.98, countMeh < totalHits / 500.0 ? 0 : countMeh - totalHits / 500.0);
@@ -188,12 +188,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount == 0)
                 return 0;
 
-            double deviation = getDeviation();
+            double? deviation = getDeviation();
 
-            if (double.IsPositiveInfinity(deviation) || double.IsNaN(deviation))
+            if (deviation == null)
+            {
                 return 0;
+            }
 
-            double accuracyValue = 100 * Math.Pow(7.5 / deviation, 2);
+            double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 2);
 
             if (mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
@@ -203,14 +205,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return accuracyValue;
         }
 
-        private double getDeviation()
+        private double? getDeviation()
         {
             if (Attributes.HitCircleCount == 0)
-                return double.NaN;
+                return null;
 
             double modifiedAccuracy = 1 - (double)(2 * countMeh + countOk + 1) / (Attributes.HitCircleCount - countMiss + 2);
             if (modifiedAccuracy < 0)
-                return double.NaN;
+                return null;
 
             double deviation = (79.5 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
             return deviation;
