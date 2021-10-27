@@ -1,78 +1,112 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using MathNet.Numerics;
 using System;
+using System.Collections.Generic;
+using MathNet.Numerics.RootFinding;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
+using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
     /// <summary>
-    /// Represents the skill required to correctly aim at every object in the map with a uniform CircleSize and normalized distances.
+    /// Represents the skill required to correctly aim at every object in the map.
     /// </summary>
-    public class Aim : OsuStrainSkill
+    public class Aim : Skill
     {
-        private const double angle_bonus_begin = Math.PI / 3;
-        private const double timing_threshold = 107;
+        protected override int HistoryLength => 1;
+
+        private double probabilityToHit(DifficultyHitObject current, double skill)
+        {
+            var currentObject = (OsuDifficultyHitObject)current;
+            var currentObjectBase = (OsuHitObject)currentObject.BaseObject;
+
+            double mehHitWindow = currentObjectBase.HitWindows.WindowFor(HitResult.Meh);
+            double radius = currentObjectBase.Radius;
+
+            if (skill == 0)
+                return 0;
+
+            if (currentObject.JumpDistance == 0 || currentObject.BaseObject is Spinner)
+                return 1;
+
+            double xDeviation;
+
+            const double deviation_intercept = 100;
+
+            if (currentObject.JumpDistance >= 2 * radius)
+            {
+                xDeviation = (currentObject.JumpDistance + deviation_intercept) / (skill * currentObject.DeltaTime);
+            }
+            else
+            {
+                xDeviation = currentObject.JumpDistance * (2 * radius + deviation_intercept) / (2 * radius * skill * currentObject.DeltaTime);
+            }
+
+            /*
+             * To compute the exact hit probability, a definite integral algorithm is required.
+             * This definite algorithm is too slow for our needs, even with low precision.
+             * So, we will approximate by multiplying two normal CDFs.
+             * This has the effect of treating circles as squares, but it's a good, extremely fast approximation.
+             */
+
+            double xHitProbability = SpecialFunctions.Erf(radius / (Math.Sqrt(2) * xDeviation));
+            return xHitProbability;
+        }
 
         public Aim(Mod[] mods)
             : base(mods)
         {
         }
 
-        private double currentStrain = 1;
+        private readonly List<DifficultyHitObject> difficultyHitObjects = new List<DifficultyHitObject>();
 
-        private double skillMultiplier => 26.25;
-        private double strainDecayBase => 0.15;
-
-        private double strainValueOf(DifficultyHitObject current)
+        protected override void Process(DifficultyHitObject current)
         {
-            if (current.BaseObject is Spinner)
-                return 0;
-
-            var osuCurrent = (OsuDifficultyHitObject)current;
-
-            double aimStrain = 0;
-
-            if (Previous.Count > 0)
-            {
-                var osuPrevious = (OsuDifficultyHitObject)Previous[0];
-
-                if (osuCurrent.Angle != null && osuCurrent.Angle.Value > angle_bonus_begin)
-                {
-                    const double scale = 90;
-
-                    var angleBonus = Math.Sqrt(
-                        Math.Max(osuPrevious.JumpDistance - scale, 0)
-                        * Math.Pow(Math.Sin(osuCurrent.Angle.Value - angle_bonus_begin), 2)
-                        * Math.Max(osuCurrent.JumpDistance - scale, 0));
-                    aimStrain = 1.4 * applyDiminishingExp(Math.Max(0, angleBonus)) / Math.Max(timing_threshold, osuPrevious.StrainTime);
-                }
-            }
-
-            double jumpDistanceExp = applyDiminishingExp(osuCurrent.JumpDistance);
-            double travelDistanceExp = applyDiminishingExp(osuCurrent.TravelDistance);
-
-            return Math.Max(
-                aimStrain + (jumpDistanceExp + travelDistanceExp + Math.Sqrt(travelDistanceExp * jumpDistanceExp)) / Math.Max(osuCurrent.StrainTime, timing_threshold),
-                (Math.Sqrt(travelDistanceExp * jumpDistanceExp) + jumpDistanceExp + travelDistanceExp) / osuCurrent.StrainTime
-            );
+            difficultyHitObjects.Add(current);
         }
 
-        private double applyDiminishingExp(double val) => Math.Pow(val, 0.99);
-
-        private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
-
-        protected override double CalculateInitialStrain(double time) => currentStrain * strainDecay(time - Previous[0].StartTime);
-
-        protected override double StrainValueAt(DifficultyHitObject current)
+        private double getExpectedHits(double skill)
         {
-            currentStrain *= strainDecay(current.DeltaTime);
-            currentStrain += strainValueOf(current) * skillMultiplier;
+            double hits = 0;
 
-            return currentStrain;
+            for (int i = 0; i < difficultyHitObjects.Count; i++)
+            {
+                var current = difficultyHitObjects[i];
+                double hitProbability = probabilityToHit(current, skill);
+                hits += hitProbability;
+            }
+
+            return hits;
+        }
+
+        public override double DifficultyValue()
+        {
+            const double guess_lower_bound = 0;
+            const double guess_upper_bound = 1;
+
+            double expectedHitsMinusThreshold(double skill)
+            {
+                const int threshold = 1;
+                double expectedHits = getExpectedHits(skill);
+                double result = difficultyHitObjects.Count - expectedHits - threshold;
+                return result;
+            }
+
+            try
+            {
+                double skillLevel = Bisection.FindRootExpand(expectedHitsMinusThreshold, guess_lower_bound, guess_upper_bound);
+                return skillLevel;
+            }
+            catch (NonConvergenceException)
+            {
+                return double.PositiveInfinity;
+            }
         }
     }
 }

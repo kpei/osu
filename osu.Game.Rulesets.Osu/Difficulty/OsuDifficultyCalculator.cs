@@ -20,7 +20,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 {
     public class OsuDifficultyCalculator : DifficultyCalculator
     {
-        private const double difficulty_multiplier = 0.0675;
+        private const double aim_scaling = 24;
+        private const double aim_exp = 0.829842642;
+        private const double tap_scaling = 14;
+        private const double tap_exp = 0.5;
+
         private double hitWindowGreat;
 
         public OsuDifficultyCalculator(Ruleset ruleset, WorkingBeatmap beatmap)
@@ -33,28 +37,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (beatmap.HitObjects.Count == 0)
                 return new OsuDifficultyAttributes { Mods = mods, Skills = skills };
 
-            double aimRating = Math.Sqrt(skills[0].DifficultyValue()) * difficulty_multiplier;
-            double speedRating = Math.Sqrt(skills[1].DifficultyValue()) * difficulty_multiplier;
-            double flashlightRating = Math.Sqrt(skills[2].DifficultyValue()) * difficulty_multiplier;
+            double aimRating = Math.Pow(skills[0].DifficultyValue(), aim_exp) * aim_scaling;
+            double speedRating = Math.Pow(skills[1].DifficultyValue(), tap_exp) * tap_scaling;
+            double flashlightRating = Math.Sqrt(skills[2].DifficultyValue()) * 0.0675;
 
             if (mods.Any(h => h is OsuModRelax))
                 speedRating = 0.0;
 
-            double baseAimPerformance = Math.Pow(5 * Math.Max(1, aimRating / 0.0675) - 4, 3) / 100000;
-            double baseSpeedPerformance = Math.Pow(5 * Math.Max(1, speedRating / 0.0675) - 4, 3) / 100000;
-            double baseFlashlightPerformance = 0.0;
-
-            if (mods.Any(h => h is OsuModFlashlight))
-                baseFlashlightPerformance = Math.Pow(flashlightRating, 2.0) * 25.0;
-
-            double basePerformance =
-                Math.Pow(
-                    Math.Pow(baseAimPerformance, 1.1) +
-                    Math.Pow(baseSpeedPerformance, 1.1) +
-                    Math.Pow(baseFlashlightPerformance, 1.1), 1.0 / 1.1
-                );
-
-            double starRating = basePerformance > 0.00001 ? Math.Cbrt(1.12) * 0.027 * (Math.Cbrt(100000 / Math.Pow(2, 1 / 1.1) * basePerformance) + 4) : 0;
+            double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(speedRating, 3));
 
             double preempt = IBeatmapDifficultyInfo.DifficultyRange(beatmap.Difficulty.ApproachRate, 1800, 1200, 450) / clockRate;
             double drainRate = beatmap.Difficulty.DrainRate;
@@ -109,7 +99,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return new Skill[]
             {
                 new Aim(mods),
-                new Speed(mods, hitWindowGreat),
+                new Speed(mods),
                 new Flashlight(mods)
             };
         }

@@ -12,14 +12,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 {
     public class OsuDifficultyHitObject : DifficultyHitObject
     {
-        private const int normalized_radius = 52;
-
         protected new OsuHitObject BaseObject => (OsuHitObject)base.BaseObject;
-
-        /// <summary>
-        /// Milliseconds elapsed since the start time of the previous <see cref="OsuDifficultyHitObject"/>, with a minimum of 25ms to account for simultaneous <see cref="OsuDifficultyHitObject"/>s.
-        /// </summary>
-        public double StrainTime { get; private set; }
 
         /// <summary>
         /// Normalized distance from the end position of the previous <see cref="OsuDifficultyHitObject"/> to the start position of this <see cref="OsuDifficultyHitObject"/>.
@@ -47,9 +40,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             this.lastObject = (OsuHitObject)lastObject;
 
             setDistances();
-
-            // Capped to 25ms to prevent difficulty calculation breaking from simulatenous objects.
-            StrainTime = Math.Max(DeltaTime, 25);
         }
 
         private void setDistances()
@@ -59,23 +49,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
                 return;
 
             // We will scale distances by this factor, so we can assume a uniform CircleSize among beatmaps.
-            float scalingFactor = normalized_radius / (float)BaseObject.Radius;
-
-            if (BaseObject.Radius < 30)
-            {
-                float smallCircleBonus = Math.Min(30 - (float)BaseObject.Radius, 5) / 50;
-                scalingFactor *= 1 + smallCircleBonus;
-            }
+            const float scaling_factor = 1;
 
             if (lastObject is Slider lastSlider)
             {
                 computeSliderCursorPosition(lastSlider);
-                TravelDistance = lastSlider.LazyTravelDistance * scalingFactor;
+                TravelDistance = lastSlider.LazyTravelDistance * scaling_factor;
             }
 
             Vector2 lastCursorPosition = getEndCursorPosition(lastObject);
 
-            JumpDistance = (BaseObject.StackedPosition * scalingFactor - lastCursorPosition * scalingFactor).Length;
+            JumpDistance = (BaseObject.StackedPosition * scaling_factor - lastCursorPosition * scaling_factor).Length;
 
             if (lastLastObject != null && !(lastLastObject is Spinner))
             {
