@@ -6,6 +6,7 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
+using osu.Game.Rulesets.Osu.Objects;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -14,6 +15,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : Skill
     {
+        protected override int HistoryLength => 2;
+
         private const double strain_decay_base = 1 / Math.E;
         private double currentStrain;
         private double maxStrain;
@@ -26,6 +29,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double strainValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
+            if (currentObject.BaseObject is Spinner)
+                return 0;
+
             return 1 / currentObject.DeltaTime;
         }
 

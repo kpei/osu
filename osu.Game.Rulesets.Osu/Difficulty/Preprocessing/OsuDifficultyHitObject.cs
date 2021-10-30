@@ -32,12 +32,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         private readonly OsuHitObject lastLastObject;
         private readonly OsuHitObject lastObject;
+        public readonly OsuHitObject nextObject;
 
-        public OsuDifficultyHitObject(HitObject hitObject, HitObject lastLastObject, HitObject lastObject, double clockRate)
+        public OsuDifficultyHitObject(HitObject nextObject, HitObject hitObject, HitObject lastLastObject, HitObject lastObject, double clockRate)
             : base(hitObject, lastObject, clockRate)
         {
             this.lastLastObject = (OsuHitObject)lastLastObject;
             this.lastObject = (OsuHitObject)lastObject;
+            this.nextObject = (OsuHitObject)nextObject;
 
             setDistances();
         }
@@ -48,18 +50,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
             if (BaseObject is Spinner || lastObject is Spinner)
                 return;
 
-            // We will scale distances by this factor, so we can assume a uniform CircleSize among beatmaps.
-            const float scaling_factor = 1;
-
             if (lastObject is Slider lastSlider)
             {
                 computeSliderCursorPosition(lastSlider);
-                TravelDistance = lastSlider.LazyTravelDistance * scaling_factor;
+                TravelDistance = lastSlider.LazyTravelDistance;
             }
 
             Vector2 lastCursorPosition = getEndCursorPosition(lastObject);
 
-            JumpDistance = (BaseObject.StackedPosition * scaling_factor - lastCursorPosition * scaling_factor).Length;
+            JumpDistance = (BaseObject.StackedPosition - lastCursorPosition).Length;
 
             if (lastLastObject != null && !(lastLastObject is Spinner))
             {

@@ -87,7 +87,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
 
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
-            aimDifficulty *= Math.Pow(SpecialFunctions.ErfInv(1 - 1.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 1.0 / totalHits), 0.829842642);
+            double missPenalty = Math.Pow(SpecialFunctions.ErfInv(1 - 1.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 1.0 / totalHits), 0.829842642);
+            aimDifficulty *= missPenalty;
 
             double aimValue = Math.Pow(aimDifficulty, 3);
 
@@ -100,6 +101,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
                 aimValue *= 1.0 + 0.04 * (12.0 - Attributes.ApproachRate);
             }
+
+            if (Attributes.HitCircleCount - countMiss == 0)
+                return aimValue;
+
+            double? deviation = getDeviation();
+
+            if (deviation == null)
+                return 0;
+
+            double deviationScaling = SpecialFunctions.Erf(79.5 / (Math.Sqrt(2) * (double)deviation));
+            aimValue *= deviationScaling;
 
             return aimValue;
         }

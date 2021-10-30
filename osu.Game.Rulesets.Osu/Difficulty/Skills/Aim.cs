@@ -4,13 +4,14 @@
 using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using MathNet.Numerics.RootFinding;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Objects;
-using osu.Game.Rulesets.Scoring;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -19,70 +20,120 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Aim : Skill
     {
-        protected override int HistoryLength => 1;
+        protected override int HistoryLength => 2;
+        private readonly double mehHitWindow;
+        private readonly double clockRate;
+        private readonly List<double> difficulties = new List<double>();
 
-        private double probabilityToHit(DifficultyHitObject current, double skill)
+        public Aim(Mod[] mods, double mehHitWindow, double clockRate)
+            : base(mods)
+        {
+            this.mehHitWindow = mehHitWindow;
+            this.clockRate = clockRate;
+        }
+
+        private double difficultyValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
             var currentObjectBase = (OsuHitObject)currentObject.BaseObject;
 
-            double mehHitWindow = currentObjectBase.HitWindows.WindowFor(HitResult.Meh);
+            var lastObject = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
+            var secondLastObject = Previous.Count > 1 ? (OsuDifficultyHitObject)Previous[1] : null;
+
+            OsuDifficultyHitObject nextObject = null;
+
+            if (lastObject != null && currentObject.nextObject != null)
+            {
+                nextObject = new OsuDifficultyHitObject(null, currentObject.nextObject, (OsuHitObject)lastObject.BaseObject, currentObjectBase, clockRate);
+            }
+
             double radius = currentObjectBase.Radius;
 
-            if (skill == 0)
+            if (currentObject.BaseObject is Spinner)
                 return 0;
 
-            if (currentObject.JumpDistance == 0 || currentObject.BaseObject is Spinner)
-                return 1;
+            // Add extra time to deltaTime for cheesing corrections.
+            double extraDeltaTime = 0;
 
-            double xDeviation;
+            /*
+             * Correction #1: Early taps.
+             * The player can tap the current note early if the previous deltaTime is greater than the current deltaTime.
+             * This kind of cheesing gives the player extra time to hit the current pattern.
+             * The maximum amount of extra time is the 50 hit window or the time difference, whichever is lower.
+             */
 
+            if (secondLastObject == null)
+            {
+                extraDeltaTime += mehHitWindow;
+            }
+            else
+            {
+                Debug.Assert(lastObject != null, nameof(lastObject) + " != null");
+                double deltaTime = currentObject.StartTime - lastObject.StartTime;
+                double lastDeltaTime = lastObject.StartTime - secondLastObject.StartTime;
+                double timeDifference = lastDeltaTime - deltaTime;
+
+                if (timeDifference > 0)
+                {
+                    extraDeltaTime += Math.Min(mehHitWindow, timeDifference);
+                }
+            }
+
+            if (nextObject == null)
+            {
+                extraDeltaTime += mehHitWindow;
+            }
+            else
+            {
+                double nextDeltaTime = nextObject.StartTime - currentObject.StartTime;
+                double deltaTime = currentObject.StartTime - lastObject.StartTime;
+                double timeDifference = nextDeltaTime - deltaTime;
+
+                if (timeDifference > 0)
+                {
+                    extraDeltaTime += Math.Min(mehHitWindow, timeDifference);
+                }
+            }
+
+            extraDeltaTime = Math.Min(mehHitWindow, extraDeltaTime);
+            double effectiveDeltaTime = currentObject.DeltaTime + extraDeltaTime;
+
+            double difficulty;
             const double deviation_intercept = 100;
 
             if (currentObject.JumpDistance >= 2 * radius)
             {
-                xDeviation = (currentObject.JumpDistance + deviation_intercept) / (skill * currentObject.DeltaTime);
+                difficulty = (currentObject.JumpDistance + currentObject.TravelDistance + deviation_intercept) / effectiveDeltaTime;
             }
             else
             {
-                xDeviation = currentObject.JumpDistance * (2 * radius + deviation_intercept) / (2 * radius * skill * currentObject.DeltaTime);
+                difficulty = (currentObject.JumpDistance + currentObject.TravelDistance) * (2 * radius + deviation_intercept) / (2 * radius * effectiveDeltaTime);
             }
 
-            /*
-             * To compute the exact hit probability, a definite integral algorithm is required.
-             * This definite algorithm is too slow for our needs, even with low precision.
-             * So, we will approximate by multiplying two normal CDFs.
-             * This has the effect of treating circles as squares, but it's a good, extremely fast approximation.
-             */
-
-            double xHitProbability = SpecialFunctions.Erf(radius / (Math.Sqrt(2) * xDeviation));
-            return xHitProbability;
+            return difficulty / radius;
         }
 
-        public Aim(Mod[] mods)
-            : base(mods)
+        private double hitProbabilityOf(double difficulty, double skill)
         {
-        }
+            if (difficulty == 0)
+                return 1;
 
-        private readonly List<DifficultyHitObject> difficultyHitObjects = new List<DifficultyHitObject>();
+            if (skill == 0)
+                return 0;
 
-        protected override void Process(DifficultyHitObject current)
-        {
-            difficultyHitObjects.Add(current);
+            return SpecialFunctions.Erf(skill / (Math.Sqrt(2) * difficulty));
         }
 
         private double getExpectedHits(double skill)
         {
-            double hits = 0;
+            double expectedHits = difficulties.Sum(t => hitProbabilityOf(t, skill));
+            return expectedHits;
+        }
 
-            for (int i = 0; i < difficultyHitObjects.Count; i++)
-            {
-                var current = difficultyHitObjects[i];
-                double hitProbability = probabilityToHit(current, skill);
-                hits += hitProbability;
-            }
-
-            return hits;
+        protected override void Process(DifficultyHitObject current)
+        {
+            double difficulty = difficultyValueOf(current);
+            difficulties.Add(difficulty);
         }
 
         public override double DifficultyValue()
@@ -94,7 +145,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             {
                 const int threshold = 1;
                 double expectedHits = getExpectedHits(skill);
-                double result = difficultyHitObjects.Count - expectedHits - threshold;
+                double result = difficulties.Count - expectedHits - threshold;
                 return result;
             }
 

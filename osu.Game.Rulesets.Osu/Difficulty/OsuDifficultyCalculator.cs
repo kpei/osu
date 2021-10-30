@@ -84,8 +84,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 var lastLast = i > 1 ? beatmap.HitObjects[i - 2] : null;
                 var last = beatmap.HitObjects[i - 1];
                 var current = beatmap.HitObjects[i];
+                var next = i < beatmap.HitObjects.Count - 1 ? beatmap.HitObjects[i + 1] : null;
 
-                yield return new OsuDifficultyHitObject(current, lastLast, last, clockRate);
+                yield return new OsuDifficultyHitObject(next, current, lastLast, last, clockRate);
             }
         }
 
@@ -95,10 +96,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             hitWindows.SetDifficulty(beatmap.Difficulty.OverallDifficulty);
 
             hitWindowGreat = hitWindows.WindowFor(HitResult.Great) / clockRate;
+            double hitWindowMeh = hitWindows.WindowFor(HitResult.Meh) / clockRate;
 
             return new Skill[]
             {
-                new Aim(mods),
+                new Aim(mods, hitWindowMeh, clockRate),
                 new Speed(mods),
                 new Flashlight(mods)
             };
