@@ -32,6 +32,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             this.clockRate = clockRate;
         }
 
+        /// <summary>
+        /// Calculates the player's standard deviation on an object if their skill level equals 1.
+        /// The higher the standard deviation, the more difficult the object is to hit.
+        /// </summary>
+        /// <param name="current">
+        /// The object's difficulty to calculate.
+        /// </param>
+        /// <returns>
+        /// The difficulty of the object.
+        /// </returns>
         private double difficultyValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
@@ -79,6 +89,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 }
             }
 
+            /*
+             * Correction #2: Early taps.
+             * The player can tap the current note late if the next deltaTime is greater than the current deltaTime.
+             * This kind of cheesing gives the player extra time to hit the current pattern.
+             * The maximum amount of extra time is the 50 hit window or the time difference, whichever is lower.
+             */
+
             if (nextObject == null)
             {
                 extraDeltaTime += mehHitWindow;
@@ -98,6 +115,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             extraDeltaTime = Math.Min(mehHitWindow, extraDeltaTime);
             double effectiveDeltaTime = currentObject.DeltaTime + extraDeltaTime;
 
+            // These formulas come from data.
+
             double difficulty;
             const double deviation_intercept = 100;
 
@@ -113,6 +132,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return difficulty / radius;
         }
 
+        /// <summary>
+        /// Calculates the probability of hitting an object with a certain difficulty and skill level.
+        /// The player's hits follow a normal distribution, so the CDF of the normal distribution is used.
+        /// </summary>
+        /// <param name="difficulty">
+        /// The difficulty of the object.
+        /// </param>
+        /// <param name="skill">
+        /// The player's skill level.
+        /// </param>
+        /// <returns>
+        /// The probability of successfully hitting the object.
+        /// </returns>
         private double hitProbabilityOf(double difficulty, double skill)
         {
             if (difficulty == 0)
@@ -124,6 +156,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return SpecialFunctions.Erf(skill / (Math.Sqrt(2) * difficulty));
         }
 
+        /// <summary>
+        /// Calculates the expected number of objects the player will successfully hit on a map given a skill level.
+        /// </summary>
+        /// <param name="skill">
+        /// The player's skill level.
+        /// </param>
+        /// <returns>
+        /// The expected number of objects the player will successfully hit.
+        /// </returns>
         private double getExpectedHits(double skill)
         {
             double expectedHits = difficulties.Sum(t => hitProbabilityOf(t, skill));
@@ -151,6 +192,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             try
             {
+                // Find the skill level so that the expected number of misses is 1.
                 double skillLevel = Bisection.FindRootExpand(expectedHitsMinusThreshold, guess_lower_bound, guess_upper_bound);
                 return skillLevel;
             }
