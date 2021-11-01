@@ -110,7 +110,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 return 0;
 
-            double deviationScaling = SpecialFunctions.Erf(79.5 / (Math.Sqrt(2) * (double)deviation));
+            double deviationScaling = SpecialFunctions.Erf(31.5 / (Math.Sqrt(2) * (double)deviation));
             aimValue *= deviationScaling;
 
             return aimValue;
