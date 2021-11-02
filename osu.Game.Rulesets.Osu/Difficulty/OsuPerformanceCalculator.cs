@@ -105,7 +105,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount - countMiss == 0)
                 return aimValue;
 
-            double? deviation = getDeviation();
+            double? deviation = calculateDeviation();
 
             if (deviation == null)
                 return 0;
@@ -119,13 +119,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double computeSpeedValue()
         {
             double speedValue = Math.Pow(Attributes.SpeedStrain, 3);
-            double? deviation = getDeviation();
+            double? deviation = calculateDeviation();
 
             if (deviation == null)
                 return 0;
 
             double deviationScaling = SpecialFunctions.Erf(13 / (Math.Sqrt(2) * (double)deviation));
             speedValue *= deviationScaling;
+
+            if (mods.Any(h => h is OsuModHidden))
+            {
+                // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
+                speedValue *= 1.0 + 0.04 * (12.0 - Attributes.ApproachRate);
+            }
 
             return speedValue;
         }
@@ -135,7 +141,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount == 0)
                 return 0;
 
-            double? deviation = getDeviation();
+            double? deviation = calculateDeviation();
 
             if (deviation == null)
             {
@@ -150,19 +156,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 accuracyValue *= 1.02;
 
             return accuracyValue;
-        }
-
-        private double? getDeviation()
-        {
-            if (Attributes.HitCircleCount == 0)
-                return null;
-
-            double modifiedAccuracy = 1 - (double)(2 * countMeh + countOk + 1) / (Attributes.HitCircleCount - countMiss + 2);
-            if (modifiedAccuracy < 0)
-                return null;
-
-            double deviation = (79.5 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
-            return deviation;
         }
 
         private double computeFlashlightValue()
@@ -199,6 +192,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             flashlightValue *= 0.98 + Math.Pow(Attributes.OverallDifficulty, 2) / 2500;
 
             return flashlightValue;
+        }
+
+        private double? calculateDeviation()
+        {
+            if (Attributes.HitCircleCount == 0)
+                return null;
+
+            double modifiedAccuracy = 1 - (double)(2 * countMeh + countOk + 1) / (Attributes.HitCircleCount - countMiss + 2);
+            if (modifiedAccuracy < 0)
+                return null;
+
+            double deviation = (79.5 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
+            return deviation;
         }
 
         private double calculateEffectiveMissCount()
