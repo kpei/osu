@@ -87,7 +87,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
 
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
-            double missPenalty = Math.Pow(SpecialFunctions.ErfInv(1 - 1.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 1.0 / totalHits), 0.829842642);
+            double missPenalty = SpecialFunctions.ErfInv(1 - 1.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 1.0 / totalHits);
             aimDifficulty *= missPenalty;
 
             double aimValue = Math.Pow(aimDifficulty, 3);
@@ -98,7 +98,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             }
             else if (mods.Any(h => h is OsuModHidden))
             {
-                // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
+                // We want to reward lower AR more when it comes to aim and HD. This nerfs high AR and buffs lower AR.
                 aimValue *= 1.0 + 0.04 * (12.0 - Attributes.ApproachRate);
             }
 
@@ -129,7 +129,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             if (mods.Any(h => h is OsuModHidden))
             {
-                // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
+                // We want to reward lower AR more when it comes to aim and HD. This nerfs high AR and buffs lower AR.
                 speedValue *= 1.0 + 0.04 * (12.0 - Attributes.ApproachRate);
             }
 
@@ -186,10 +186,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             flashlightValue *= 0.7 + 0.1 * Math.Min(1.0, totalHits / 200.0) +
                                (totalHits > 200 ? 0.2 * Math.Min(1.0, (totalHits - 200) / 200.0) : 0.0);
 
-            // Scale the flashlight value with accuracy _slightly_.
-            flashlightValue *= 0.5 + accuracy / 2.0;
-            // It is important to also consider accuracy difficulty when doing that.
-            flashlightValue *= 0.98 + Math.Pow(Attributes.OverallDifficulty, 2) / 2500;
+            // Scale flashlight value with deviation.
+            double? deviation = calculateDeviation();
+
+            if (deviation == null)
+                return 0;
+
+            double deviationScaling = SpecialFunctions.Erf(31.5 / (Math.Sqrt(2) * (double)deviation));
+            flashlightValue *= deviationScaling;
 
             return flashlightValue;
         }
