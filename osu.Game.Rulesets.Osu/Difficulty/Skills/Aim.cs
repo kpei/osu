@@ -55,7 +55,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             const double b = 1.63;
             const double m = 4.79;
-            double difficulty = b + m * currentObject.JumpDistance / currentObject.DeltaTime;
+            double difficulty = b + m * (currentObject.JumpDistance + currentObject.TravelDistance) / currentObject.DeltaTime;
 
             if (currentObject.JumpDistance < 2 * radius)
             {
@@ -117,7 +117,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double expectedHitsMinusThreshold(double skill)
             {
-                const int threshold = 1;
+                const double threshold = 0.5;
                 double expectedHits = getExpectedHits(skill);
                 double result = difficulties.Count - expectedHits - threshold;
                 return result;
