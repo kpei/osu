@@ -87,7 +87,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
 
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
-            double missPenalty = SpecialFunctions.ErfInv(1 - 1.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 1.0 / totalHits);
+            double missPenalty = SpecialFunctions.ErfInv(1 - 4.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 4.0 / totalHits);
             aimDifficulty *= missPenalty;
 
             double aimValue = Math.Pow(aimDifficulty, 3);
@@ -148,7 +148,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return 0;
             }
 
-            double accuracyValue = 4750 / Math.Pow((double)deviation, 2);
+            double accuracyValue = 140 * 5 / (double)deviation;
 
             if (mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
@@ -218,7 +218,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             if (Attributes.SliderCount > 0)
             {
-                double fullComboThreshold = Attributes.MaxCombo - 0.1 * Attributes.SliderCount;
+                double fullComboThreshold = Attributes.MaxCombo - 0.05 * Attributes.SliderCount;
                 if (scoreMaxCombo < fullComboThreshold)
                     comboBasedMissCount = fullComboThreshold / Math.Max(1.0, scoreMaxCombo);
             }
