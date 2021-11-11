@@ -20,9 +20,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 {
     public class OsuDifficultyCalculator : DifficultyCalculator
     {
-        private const double aim_scaling = 6;
-        private const double aim_exp = 1.0;
-        private const double tap_scaling = 15;
+        private const double aim_scaling = 34.5;
+        private const double aim_exp = 0.829842642;
+        private const double tap_scaling = 14;
         private const double tap_exp = 0.5;
 
         private double hitWindowGreat;
@@ -96,11 +96,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             hitWindows.SetDifficulty(beatmap.Difficulty.OverallDifficulty);
 
             hitWindowGreat = hitWindows.WindowFor(HitResult.Great) / clockRate;
-            double hitWindowMeh = hitWindows.WindowFor(HitResult.Meh) / clockRate;
 
             return new Skill[]
             {
-                new Aim(mods, hitWindowMeh, clockRate),
+                new Aim(mods, hitWindowGreat, clockRate),
                 new Speed(mods),
                 new Flashlight(mods)
             };
