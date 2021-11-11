@@ -20,14 +20,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Aim : Skill
     {
         protected override int HistoryLength => 2;
-        private readonly double mehHitWindow;
+        private readonly double greatHitWindow;
         private readonly double clockRate;
         private readonly List<double> difficulties = new List<double>();
 
-        public Aim(Mod[] mods, double mehHitWindow, double clockRate)
+        public Aim(Mod[] mods, double greatHitWindow, double clockRate)
             : base(mods)
         {
-            this.mehHitWindow = mehHitWindow;
+            this.greatHitWindow = greatHitWindow;
             this.clockRate = clockRate;
         }
 
@@ -46,21 +46,30 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             var currentObject = (OsuDifficultyHitObject)current;
             var currentObjectBase = (OsuHitObject)currentObject.BaseObject;
 
-            double radius = currentObjectBase.Radius;
-
             if (currentObject.BaseObject is Spinner)
                 return 0;
 
-            // These formulas come from data.
+            double radius = currentObjectBase.Radius;
 
-            const double b = 1.63;
-            const double m = 4.79;
-            double difficulty = b + m * (currentObject.JumpDistance + currentObject.TravelDistance) / currentObject.DeltaTime;
+            double extraDeltaTime = 0;
 
-            if (currentObject.JumpDistance < 2 * radius)
+            if (Previous.Count > 0)
             {
-                difficulty *= currentObject.JumpDistance / (2 * radius);
+                if (Previous[0].DeltaTime > currentObject.DeltaTime)
+                {
+                    double timeDifference = Previous[0].DeltaTime - currentObject.DeltaTime;
+                    extraDeltaTime += Math.Min(greatHitWindow, timeDifference);
+                }
             }
+            else
+            {
+                extraDeltaTime += greatHitWindow;
+            }
+
+            extraDeltaTime = Math.Min(greatHitWindow, extraDeltaTime);
+            double effectiveDeltaTime = currentObject.DeltaTime + extraDeltaTime;
+
+            double difficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / effectiveDeltaTime;
 
             return difficulty / radius;
         }
@@ -117,7 +126,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double expectedHitsMinusThreshold(double skill)
             {
-                const double threshold = 0.5;
+                const double threshold = 4;
                 double expectedHits = getExpectedHits(skill);
                 double result = difficulties.Count - expectedHits - threshold;
                 return result;
