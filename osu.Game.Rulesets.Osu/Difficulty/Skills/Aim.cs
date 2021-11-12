@@ -21,14 +21,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     {
         protected override int HistoryLength => 2;
         private readonly double greatHitWindow;
-        private readonly double clockRate;
         private readonly List<double> difficulties = new List<double>();
 
-        public Aim(Mod[] mods, double greatHitWindow, double clockRate)
+        public Aim(Mod[] mods, double greatHitWindow)
             : base(mods)
         {
             this.greatHitWindow = greatHitWindow;
-            this.clockRate = clockRate;
         }
 
         /// <summary>
