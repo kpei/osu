@@ -65,6 +65,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double flashlightValue = computeFlashlightValue();
             double totalValue = multiplier * (aimValue + speedValue + accuracyValue + flashlightValue);
 
+            if (Attributes.ApproachRate > 10)
+            {
+                totalValue *= 1 + 0.1 * Math.Pow(Attributes.ApproachRate - 10, 2);
+            }
+
             if (categoryRatings != null)
             {
                 categoryRatings.Add("Aim", aimValue);
