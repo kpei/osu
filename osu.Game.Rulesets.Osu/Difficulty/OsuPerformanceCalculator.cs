@@ -153,7 +153,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return 0;
             }
 
-            double accuracyValue = 140 * 5 / (double)deviation;
+            double accuracyValue = 4750 / (double)(deviation * deviation);
 
             if (mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
