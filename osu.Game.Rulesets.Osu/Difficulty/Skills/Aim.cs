@@ -20,12 +20,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Aim : Skill
     {
         protected override int HistoryLength => 2;
+        private readonly double radius;
         private readonly double greatHitWindow;
         private readonly List<double> difficulties = new List<double>();
 
-        public Aim(Mod[] mods, double greatHitWindow)
+        public Aim(Mod[] mods, double radius, double greatHitWindow)
             : base(mods)
         {
+            this.radius = radius;
             this.greatHitWindow = greatHitWindow;
         }
 
@@ -69,7 +71,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double difficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / effectiveDeltaTime;
 
-            return difficulty / radius;
+            return difficulty;
         }
 
         /// <summary>
@@ -93,7 +95,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (skill == 0)
                 return 0;
 
-            return SpecialFunctions.Erf(skill / (Math.Sqrt(2) * difficulty));
+            return SpecialFunctions.Erf(radius * skill / (Math.Sqrt(2) * difficulty));
         }
 
         /// <summary>
