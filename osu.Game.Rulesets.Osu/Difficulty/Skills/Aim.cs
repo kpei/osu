@@ -44,12 +44,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private double difficultyValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
-            var currentObjectBase = (OsuHitObject)currentObject.BaseObject;
 
             if (currentObject.BaseObject is Spinner)
                 return 0;
-
-            double radius = currentObjectBase.Radius;
 
             double extraDeltaTime = 0;
 
