@@ -15,8 +15,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : Skill
     {
-        protected override int HistoryLength => 2;
-
         private const double strain_decay_base = 1 / Math.E;
         private double currentStrain;
         private double maxStrain;
