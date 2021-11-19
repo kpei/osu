@@ -9,6 +9,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Testing;
 using osu.Game.Database;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Scoring;
 
@@ -22,13 +23,14 @@ namespace osu.Game.Beatmaps
 
         public int BeatmapVersion;
 
-        private int? onlineBeatmapID;
+        private int? onlineID;
 
         [JsonProperty("id")]
-        public int? OnlineBeatmapID
+        [Column("OnlineBeatmapID")]
+        public int? OnlineID
         {
-            get => onlineBeatmapID;
-            set => onlineBeatmapID = value > 0 ? value : null;
+            get => onlineID;
+            set => onlineID = value > 0 ? value : null;
         }
 
         [JsonIgnore]
@@ -47,10 +49,7 @@ namespace osu.Game.Beatmaps
         public BeatmapDifficulty BaseDifficulty { get; set; }
 
         [NotMapped]
-        public BeatmapMetrics Metrics { get; set; }
-
-        [NotMapped]
-        public BeatmapOnlineInfo OnlineInfo { get; set; }
+        public APIBeatmap OnlineInfo { get; set; }
 
         [NotMapped]
         public int? MaxCombo { get; set; }
@@ -136,12 +135,12 @@ namespace osu.Game.Beatmaps
         public double TimelineZoom { get; set; }
 
         // Metadata
-        public string Version { get; set; }
-
-        private string versionString => string.IsNullOrEmpty(Version) ? string.Empty : $"[{Version}]";
+        [Column("Version")]
+        public string DifficultyName { get; set; }
 
         [JsonProperty("difficulty_rating")]
-        public double StarDifficulty { get; set; }
+        [Column("StarDifficulty")]
+        public double StarRating { get; set; }
 
         /// <summary>
         /// Currently only populated for beatmap deletion. Use <see cref="ScoreManager"/> to query scores.
@@ -149,19 +148,22 @@ namespace osu.Game.Beatmaps
         public List<ScoreInfo> Scores { get; set; }
 
         [JsonIgnore]
-        public DifficultyRating DifficultyRating => BeatmapDifficultyCache.GetDifficultyRating(StarDifficulty);
+        public DifficultyRating DifficultyRating => BeatmapDifficultyCache.GetDifficultyRating(StarRating);
 
         public override string ToString() => this.GetDisplayTitle();
 
         public bool Equals(BeatmapInfo other)
         {
-            if (ID == 0 || other?.ID == 0)
-                // one of the two BeatmapInfos we are comparing isn't sourced from a database.
-                // fall back to reference equality.
-                return ReferenceEquals(this, other);
+            if (ReferenceEquals(this, other)) return true;
+            if (other == null) return false;
 
-            return ID == other?.ID;
+            if (ID != 0 && other.ID != 0)
+                return ID == other.ID;
+
+            return false;
         }
+
+        public bool Equals(IBeatmapInfo other) => other is BeatmapInfo b && Equals(b);
 
         public bool AudioEquals(BeatmapInfo other) => other != null && BeatmapSet != null && other.BeatmapSet != null &&
                                                       BeatmapSet.Hash == other.BeatmapSet.Hash &&
@@ -178,18 +180,23 @@ namespace osu.Game.Beatmaps
 
         #region Implementation of IHasOnlineID
 
-        public int OnlineID => OnlineBeatmapID ?? -1;
+        int IHasOnlineID<int>.OnlineID => OnlineID ?? -1;
 
         #endregion
 
         #region Implementation of IBeatmapInfo
 
-        string IBeatmapInfo.DifficultyName => Version;
-        IBeatmapMetadataInfo IBeatmapInfo.Metadata => Metadata;
+        [JsonIgnore]
+        IBeatmapMetadataInfo IBeatmapInfo.Metadata => Metadata ?? BeatmapSet?.Metadata ?? new BeatmapMetadata();
+
+        [JsonIgnore]
         IBeatmapDifficultyInfo IBeatmapInfo.Difficulty => BaseDifficulty;
+
+        [JsonIgnore]
         IBeatmapSetInfo IBeatmapInfo.BeatmapSet => BeatmapSet;
+
+        [JsonIgnore]
         IRulesetInfo IBeatmapInfo.Ruleset => Ruleset;
-        double IBeatmapInfo.StarRating => StarDifficulty;
 
         #endregion
     }

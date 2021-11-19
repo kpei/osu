@@ -103,7 +103,7 @@ namespace osu.Game.Screens.OnlinePlay.Lounge
 
         public IEnumerable<string> FilterTerms => new[] { Room.Name.Value };
 
-        private bool matchingFilter;
+        private bool matchingFilter = true;
 
         public bool MatchingFilter
         {
@@ -134,6 +134,9 @@ namespace osu.Game.Screens.OnlinePlay.Lounge
 
         public bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
         {
+            if (e.Repeat)
+                return false;
+
             if (SelectedRoom.Value != Room)
                 return false;
 
@@ -181,6 +184,10 @@ namespace osu.Game.Screens.OnlinePlay.Lounge
             [Resolved(canBeNull: true)]
             private LoungeSubScreen lounge { get; set; }
 
+            public override bool HandleNonPositionalInput => true;
+
+            protected override bool BlockNonPositionalInput => true;
+
             public PasswordEntryPopover(Room room)
             {
                 this.room = room;
@@ -200,6 +207,8 @@ namespace osu.Game.Screens.OnlinePlay.Lounge
                     Spacing = new Vector2(5),
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
+                    LayoutDuration = 500,
+                    LayoutEasing = Easing.OutQuint,
                     Children = new Drawable[]
                     {
                         new FillFlowContainer
@@ -230,10 +239,24 @@ namespace osu.Game.Screens.OnlinePlay.Lounge
 
                 sampleJoinFail = audio.Samples.Get(@"UI/password-fail");
 
-                joinButton.Action = () => lounge?.Join(room, passwordTextbox.Text, null, joinFailed);
+                joinButton.Action = performJoin;
             }
 
-            private void joinFailed(string error)
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                Schedule(() => GetContainingInputManager().ChangeFocus(passwordTextbox));
+                passwordTextbox.OnCommit += (_, __) => performJoin();
+            }
+
+            private void performJoin()
+            {
+                lounge?.Join(room, passwordTextbox.Text, null, joinFailed);
+                GetContainingInputManager().TriggerFocusContention(passwordTextbox);
+            }
+
+            private void joinFailed(string error) => Schedule(() =>
             {
                 passwordTextbox.Text = string.Empty;
 
@@ -249,15 +272,7 @@ namespace osu.Game.Screens.OnlinePlay.Lounge
                 Body.Shake();
 
                 sampleJoinFail?.Play();
-            }
-
-            protected override void LoadComplete()
-            {
-                base.LoadComplete();
-
-                Schedule(() => GetContainingInputManager().ChangeFocus(passwordTextbox));
-                passwordTextbox.OnCommit += (_, __) => lounge?.Join(room, passwordTextbox.Text, null, joinFailed);
-            }
+            });
         }
     }
 }

@@ -26,10 +26,10 @@ namespace osu.Game.Rulesets.Difficulty
         private Mod[] playableMods;
         private double clockRate;
 
-        private readonly Ruleset ruleset;
-        private readonly WorkingBeatmap beatmap;
+        private readonly IRulesetInfo ruleset;
+        private readonly IWorkingBeatmap beatmap;
 
-        protected DifficultyCalculator(Ruleset ruleset, WorkingBeatmap beatmap)
+        protected DifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
         {
             this.ruleset = ruleset;
             this.beatmap = beatmap;
@@ -58,6 +58,11 @@ namespace osu.Game.Rulesets.Difficulty
             return CreateDifficultyAttributes(Beatmap, playableMods, skills, clockRate);
         }
 
+        /// <summary>
+        /// Calculates the difficulty of the beatmap and returns a set of <see cref="TimedDifficultyAttributes"/> representing the difficulty at every relevant time value in the beatmap.
+        /// </summary>
+        /// <param name="mods">The mods that should be applied to the beatmap.</param>
+        /// <returns>The set of <see cref="TimedDifficultyAttributes"/>.</returns>
         public List<TimedDifficultyAttributes> CalculateTimed(params Mod[] mods)
         {
             preProcess(mods);
@@ -77,7 +82,7 @@ namespace osu.Game.Rulesets.Difficulty
                 foreach (var skill in skills)
                     skill.ProcessInternal(hitObject);
 
-                attribs.Add(new TimedDifficultyAttributes(hitObject.EndTime, CreateDifficultyAttributes(progressiveBeatmap, playableMods, skills, clockRate)));
+                attribs.Add(new TimedDifficultyAttributes(hitObject.EndTime * clockRate, CreateDifficultyAttributes(progressiveBeatmap, playableMods, skills, clockRate)));
             }
 
             return attribs;
@@ -111,7 +116,7 @@ namespace osu.Game.Rulesets.Difficulty
         {
             playableMods = mods.Select(m => m.DeepClone()).ToArray();
 
-            Beatmap = beatmap.GetPlayableBeatmap(ruleset.RulesetInfo, playableMods);
+            Beatmap = beatmap.GetPlayableBeatmap(ruleset, playableMods);
 
             var track = new TrackVirtual(10000);
             playableMods.OfType<IApplicableToTrack>().ForEach(m => m.ApplyToTrack(track));
@@ -158,7 +163,7 @@ namespace osu.Game.Rulesets.Difficulty
                 // Apply the rest of the remaining mods recursively.
                 for (int i = 0; i < remainingMods.Length; i++)
                 {
-                    var (nextSet, nextCount) = flatten(remainingMods.Span[i]);
+                    (var nextSet, int nextCount) = flatten(remainingMods.Span[i]);
 
                     // Check if any mods in the next set are incompatible with any of the current set.
                     if (currentSet.SelectMany(m => m.IncompatibleMods).Any(c => nextSet.Any(c.IsInstanceOfType)))
@@ -185,7 +190,7 @@ namespace osu.Game.Rulesets.Difficulty
 
                 foreach (var nested in multi.Mods)
                 {
-                    var (nestedSet, nestedCount) = flatten(nested);
+                    (var nestedSet, int nestedCount) = flatten(nested);
                     set = set.Concat(nestedSet);
                     count += nestedCount;
                 }

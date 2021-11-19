@@ -46,7 +46,7 @@ namespace osu.Game.Tests.Visual.Editing
                 editorBeatmap.BeatmapInfo.Metadata.Artist = "artist";
                 editorBeatmap.BeatmapInfo.Metadata.Title = "title";
             });
-            AddStep("Set difficulty name", () => editorBeatmap.BeatmapInfo.Version = "difficulty");
+            AddStep("Set difficulty name", () => editorBeatmap.BeatmapInfo.DifficultyName = "difficulty");
 
             AddStep("Add timing point", () => editorBeatmap.ControlPointInfo.Add(0, new TimingControlPoint()));
 
@@ -55,6 +55,11 @@ namespace osu.Game.Tests.Visual.Editing
             AddStep("Place single hitcircle", () => InputManager.Click(MouseButton.Left));
 
             checkMutations();
+
+            // After placement these must be non-default as defaults are read-only.
+            AddAssert("Placed object has non-default control points", () =>
+                editorBeatmap.HitObjects[0].SampleControlPoint != SampleControlPoint.DEFAULT &&
+                editorBeatmap.HitObjects[0].DifficultyControlPoint != DifficultyControlPoint.DEFAULT);
 
             AddStep("Save", () => InputManager.Keys(PlatformAction.Save));
 
@@ -80,7 +85,7 @@ namespace osu.Game.Tests.Visual.Editing
             AddAssert("Beatmap contains single hitcircle", () => editorBeatmap.HitObjects.Count == 1);
             AddAssert("Beatmap has correct overall difficulty", () => editorBeatmap.Difficulty.OverallDifficulty == 7);
             AddAssert("Beatmap has correct metadata", () => editorBeatmap.BeatmapInfo.Metadata.Artist == "artist" && editorBeatmap.BeatmapInfo.Metadata.Title == "title");
-            AddAssert("Beatmap has correct difficulty name", () => editorBeatmap.BeatmapInfo.Version == "difficulty");
+            AddAssert("Beatmap has correct difficulty name", () => editorBeatmap.BeatmapInfo.DifficultyName == "difficulty");
         }
     }
 }

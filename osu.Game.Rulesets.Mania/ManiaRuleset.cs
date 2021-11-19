@@ -272,7 +272,7 @@ namespace osu.Game.Rulesets.Mania
 
         public override Drawable CreateIcon() => new SpriteIcon { Icon = OsuIcon.RulesetMania };
 
-        public override DifficultyCalculator CreateDifficultyCalculator(WorkingBeatmap beatmap) => new ManiaDifficultyCalculator(this, beatmap);
+        public override DifficultyCalculator CreateDifficultyCalculator(IWorkingBeatmap beatmap) => new ManiaDifficultyCalculator(RulesetInfo, beatmap);
 
         public int LegacyID => 3;
 
@@ -316,7 +316,7 @@ namespace osu.Game.Rulesets.Mania
 
                 case PlayfieldType.Dual:
                 {
-                    var keys = getDualStageKeyCount(variant);
+                    int keys = getDualStageKeyCount(variant);
                     return $"{keys}K + {keys}K";
                 }
             }
