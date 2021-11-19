@@ -22,13 +22,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
     {
         private const double aim_scaling = 34.5;
         private const double aim_exp = 0.829842642;
-        private const double tap_scaling = 14;
+        private const double tap_scaling = 15.25;
         private const double tap_exp = 0.5;
 
         private double hitWindowGreat;
         private double radius;
 
-        public OsuDifficultyCalculator(Ruleset ruleset, WorkingBeatmap beatmap)
+        public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
         {
         }
