@@ -23,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private const double difficulty_multiplier = 0.0675;
         private double hitWindowGreat;
 
-        public OsuDifficultyCalculator(Ruleset ruleset, WorkingBeatmap beatmap)
+        public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
         {
         }
@@ -34,8 +34,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return new OsuDifficultyAttributes { Mods = mods, Skills = skills };
 
             double aimRating = Math.Sqrt(skills[0].DifficultyValue()) * difficulty_multiplier;
-            double speedRating = Math.Sqrt(skills[1].DifficultyValue()) * difficulty_multiplier;
-            double flashlightRating = Math.Sqrt(skills[2].DifficultyValue()) * difficulty_multiplier;
+            double aimRatingNoSliders = Math.Sqrt(skills[1].DifficultyValue()) * difficulty_multiplier;
+            double speedRating = Math.Sqrt(skills[2].DifficultyValue()) * difficulty_multiplier;
+            double flashlightRating = Math.Sqrt(skills[3].DifficultyValue()) * difficulty_multiplier;
+
+            double sliderFactor = aimRating > 0 ? aimRatingNoSliders / aimRating : 1;
 
             if (mods.Any(h => h is OsuModRelax))
                 speedRating = 0.0;
@@ -64,6 +67,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             maxCombo += beatmap.HitObjects.OfType<Slider>().Sum(s => s.NestedHitObjects.Count - 1);
 
             int hitCirclesCount = beatmap.HitObjects.Count(h => h is HitCircle);
+            int sliderCount = beatmap.HitObjects.Count(h => h is Slider);
             int spinnerCount = beatmap.HitObjects.Count(h => h is Spinner);
 
             return new OsuDifficultyAttributes
@@ -73,11 +77,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 AimStrain = aimRating,
                 SpeedStrain = speedRating,
                 FlashlightRating = flashlightRating,
+                SliderFactor = sliderFactor,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
                 OverallDifficulty = (80 - hitWindowGreat) / 6,
                 DrainRate = drainRate,
                 MaxCombo = maxCombo,
                 HitCircleCount = hitCirclesCount,
+                SliderCount = sliderCount,
                 SpinnerCount = spinnerCount,
                 Skills = skills
             };
@@ -106,7 +112,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             return new Skill[]
             {
-                new Aim(mods),
+                new Aim(mods, true),
+                new Aim(mods, false),
                 new Speed(mods, hitWindowGreat),
                 new Flashlight(mods)
             };

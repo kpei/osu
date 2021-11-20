@@ -8,6 +8,7 @@ using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Testing;
 using osu.Game.Database;
+using osu.Game.Extensions;
 
 namespace osu.Game.Beatmaps
 {
@@ -16,35 +17,30 @@ namespace osu.Game.Beatmaps
     {
         public int ID { get; set; }
 
-        private int? onlineBeatmapSetID;
+        private int? onlineID;
 
-        public int? OnlineBeatmapSetID
+        [Column("OnlineBeatmapSetID")]
+        public int? OnlineID
         {
-            get => onlineBeatmapSetID;
-            set => onlineBeatmapSetID = value > 0 ? value : null;
+            get => onlineID;
+            set => onlineID = value > 0 ? value : null;
         }
 
         public DateTimeOffset DateAdded { get; set; }
-
-        public BeatmapSetOnlineStatus Status { get; set; } = BeatmapSetOnlineStatus.None;
 
         public BeatmapMetadata Metadata { get; set; }
 
         public List<BeatmapInfo> Beatmaps { get; set; }
 
+        public BeatmapSetOnlineStatus Status { get; set; } = BeatmapSetOnlineStatus.None;
+
         [NotNull]
         public List<BeatmapSetFileInfo> Files { get; set; } = new List<BeatmapSetFileInfo>();
-
-        [NotMapped]
-        public BeatmapSetOnlineInfo OnlineInfo { get; set; }
-
-        [NotMapped]
-        public BeatmapSetMetrics Metrics { get; set; }
 
         /// <summary>
         /// The maximum star difficulty of all beatmaps in this set.
         /// </summary>
-        public double MaxStarDifficulty => Beatmaps?.Max(b => b.StarDifficulty) ?? 0;
+        public double MaxStarDifficulty => Beatmaps?.Max(b => b.StarRating) ?? 0;
 
         /// <summary>
         /// The maximum playable length in milliseconds of all beatmaps in this set.
@@ -66,7 +62,7 @@ namespace osu.Game.Beatmaps
         /// The path returned is relative to the user file storage.
         /// </summary>
         /// <param name="filename">The name of the file to get the storage path of.</param>
-        public string GetPathForFile(string filename) => Files.SingleOrDefault(f => string.Equals(f.Filename, filename, StringComparison.OrdinalIgnoreCase))?.FileInfo.StoragePath;
+        public string GetPathForFile(string filename) => Files.SingleOrDefault(f => string.Equals(f.Filename, filename, StringComparison.OrdinalIgnoreCase))?.FileInfo.GetStoragePath();
 
         public override string ToString() => Metadata?.ToString() ?? base.ToString();
 
@@ -74,24 +70,20 @@ namespace osu.Game.Beatmaps
 
         public bool Equals(BeatmapSetInfo other)
         {
-            if (other == null)
-                return false;
+            if (ReferenceEquals(this, other)) return true;
+            if (other == null) return false;
 
             if (ID != 0 && other.ID != 0)
                 return ID == other.ID;
 
-            if (OnlineBeatmapSetID.HasValue && other.OnlineBeatmapSetID.HasValue)
-                return OnlineBeatmapSetID == other.OnlineBeatmapSetID;
-
-            if (!string.IsNullOrEmpty(Hash) && !string.IsNullOrEmpty(other.Hash))
-                return Hash == other.Hash;
-
-            return ReferenceEquals(this, other);
+            return false;
         }
+
+        public bool Equals(IBeatmapSetInfo other) => other is BeatmapSetInfo b && Equals(b);
 
         #region Implementation of IHasOnlineID
 
-        public int? OnlineID => OnlineBeatmapSetID;
+        int IHasOnlineID<int>.OnlineID => OnlineID ?? -1;
 
         #endregion
 

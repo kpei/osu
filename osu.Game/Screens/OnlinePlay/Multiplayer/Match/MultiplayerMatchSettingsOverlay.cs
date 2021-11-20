@@ -7,7 +7,6 @@ using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Extensions.ExceptionExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -99,14 +98,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
             }
 
             [BackgroundDependencyLoader]
-            private void load(OsuColour colours)
+            private void load(OverlayColourProvider colourProvider, OsuColour colours)
             {
                 InternalChildren = new Drawable[]
                 {
                     new Box
                     {
                         RelativeSizeAxes = Axes.Both,
-                        Colour = Color4Extensions.FromHex(@"28242d"),
+                        Colour = colourProvider.Background4
                     },
                     new GridContainer
                     {
@@ -154,7 +153,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                                                             {
                                                                 new Section("Room name")
                                                                 {
-                                                                    Child = NameField = new SettingsTextBox
+                                                                    Child = NameField = new OsuTextBox
                                                                     {
                                                                         RelativeSizeAxes = Axes.X,
                                                                         TabbableContentContainer = this,
@@ -203,7 +202,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                                                                 new Section("Max participants")
                                                                 {
                                                                     Alpha = disabled_alpha,
-                                                                    Child = MaxParticipantsField = new SettingsNumberTextBox
+                                                                    Child = MaxParticipantsField = new OsuNumberBox
                                                                     {
                                                                         RelativeSizeAxes = Axes.X,
                                                                         TabbableContentContainer = this,
@@ -212,7 +211,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                                                                 },
                                                                 new Section("Password (optional)")
                                                                 {
-                                                                    Child = PasswordTextBox = new SettingsPasswordTextBox
+                                                                    Child = PasswordTextBox = new OsuPasswordTextBox
                                                                     {
                                                                         RelativeSizeAxes = Axes.X,
                                                                         TabbableContentContainer = this,
@@ -249,7 +248,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
                                         new Box
                                         {
                                             RelativeSizeAxes = Axes.Both,
-                                            Colour = Color4Extensions.FromHex(@"28242d").Darken(0.5f).Opacity(1f),
+                                            Colour = colourProvider.Background5
                                         },
                                         new FillFlowContainer
                                         {
@@ -366,7 +365,19 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
             {
                 Debug.Assert(applyingSettingsOperation != null);
 
-                ErrorText.Text = text;
+                // see https://github.com/ppy/osu-web/blob/2c97aaeb64fb4ed97c747d8383a35b30f57428c7/app/Models/Multiplayer/PlaylistItem.php#L48.
+                const string not_found_prefix = "beatmaps not found:";
+
+                if (text.StartsWith(not_found_prefix, StringComparison.Ordinal))
+                {
+                    ErrorText.Text = "The selected beatmap is not available online.";
+                    SelectedItem.Value.MarkInvalid();
+                }
+                else
+                {
+                    ErrorText.Text = text;
+                }
+
                 ErrorText.FadeIn(50);
 
                 applyingSettingsOperation.Dispose();

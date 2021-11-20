@@ -45,7 +45,7 @@ namespace osu.Game.Overlays.Settings.Sections
         {
             get
             {
-                var index = skinItems.FindIndex(s => s.ID > 0);
+                int index = skinItems.FindIndex(s => s.ID > 0);
                 if (index < 0)
                     index = skinItems.Count;
 
@@ -56,54 +56,25 @@ namespace osu.Game.Overlays.Settings.Sections
         [Resolved]
         private SkinManager skins { get; set; }
 
-        private IBindable<WeakReference<SkinInfo>> managerUpdated;
-        private IBindable<WeakReference<SkinInfo>> managerRemoved;
-
         [BackgroundDependencyLoader(permitNulls: true)]
         private void load(OsuConfigManager config, [CanBeNull] SkinEditorOverlay skinEditor)
         {
             Children = new Drawable[]
             {
-                skinDropdown = new SkinSettingsDropdown(),
+                skinDropdown = new SkinSettingsDropdown
+                {
+                    LabelText = SkinSettingsStrings.CurrentSkin
+                },
                 new SettingsButton
                 {
                     Text = SkinSettingsStrings.SkinLayoutEditor,
                     Action = () => skinEditor?.Toggle(),
                 },
                 new ExportSkinButton(),
-                new SettingsSlider<float, SizeSlider>
-                {
-                    LabelText = SkinSettingsStrings.GameplayCursorSize,
-                    Current = config.GetBindable<float>(OsuSetting.GameplayCursorSize),
-                    KeyboardStep = 0.01f
-                },
-                new SettingsCheckbox
-                {
-                    LabelText = SkinSettingsStrings.AutoCursorSize,
-                    Current = config.GetBindable<bool>(OsuSetting.AutoCursorSize)
-                },
-                new SettingsCheckbox
-                {
-                    LabelText = SkinSettingsStrings.BeatmapSkins,
-                    Current = config.GetBindable<bool>(OsuSetting.BeatmapSkins)
-                },
-                new SettingsCheckbox
-                {
-                    LabelText = SkinSettingsStrings.BeatmapColours,
-                    Current = config.GetBindable<bool>(OsuSetting.BeatmapColours)
-                },
-                new SettingsCheckbox
-                {
-                    LabelText = SkinSettingsStrings.BeatmapHitsounds,
-                    Current = config.GetBindable<bool>(OsuSetting.BeatmapHitsounds)
-                },
             };
 
-            managerUpdated = skins.ItemUpdated.GetBoundCopy();
-            managerUpdated.BindValueChanged(itemUpdated);
-
-            managerRemoved = skins.ItemRemoved.GetBoundCopy();
-            managerRemoved.BindValueChanged(itemRemoved);
+            skins.ItemUpdated += itemUpdated;
+            skins.ItemRemoved += itemRemoved;
 
             config.BindWith(OsuSetting.Skin, configBindable);
 
@@ -152,11 +123,7 @@ namespace osu.Game.Overlays.Settings.Sections
             skinDropdown.Items = skinItems;
         }
 
-        private void itemUpdated(ValueChangedEvent<WeakReference<SkinInfo>> weakItem)
-        {
-            if (weakItem.NewValue.TryGetTarget(out var item))
-                Schedule(() => addItem(item));
-        }
+        private void itemUpdated(SkinInfo item) => Schedule(() => addItem(item));
 
         private void addItem(SkinInfo item)
         {
@@ -165,17 +132,24 @@ namespace osu.Game.Overlays.Settings.Sections
             skinDropdown.Items = newDropdownItems;
         }
 
-        private void itemRemoved(ValueChangedEvent<WeakReference<SkinInfo>> weakItem)
-        {
-            if (weakItem.NewValue.TryGetTarget(out var item))
-                Schedule(() => skinDropdown.Items = skinDropdown.Items.Where(i => i.ID != item.ID).ToArray());
-        }
+        private void itemRemoved(SkinInfo item) => Schedule(() => skinDropdown.Items = skinDropdown.Items.Where(i => i.ID != item.ID).ToArray());
 
         private void sortUserSkins(List<SkinInfo> skinsList)
         {
             // Sort user skins separately from built-in skins
             skinsList.Sort(firstNonDefaultSkinIndex, skinsList.Count - firstNonDefaultSkinIndex,
                 Comparer<SkinInfo>.Create((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (skins != null)
+            {
+                skins.ItemUpdated -= itemUpdated;
+                skins.ItemRemoved -= itemRemoved;
+            }
         }
 
         private class SkinSettingsDropdown : SettingsDropdown<SkinInfo>

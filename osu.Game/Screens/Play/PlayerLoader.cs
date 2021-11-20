@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using ManagedBass.Fx;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
@@ -34,6 +35,10 @@ namespace osu.Game.Screens.Play
     public class PlayerLoader : ScreenWithBeatmapBackground
     {
         protected const float BACKGROUND_BLUR = 15;
+
+        protected const double CONTENT_OUT_DURATION = 300;
+
+        protected virtual double PlayerPushDelay => 1800;
 
         public override bool HideOverlaysOnEnter => hideOverlays;
 
@@ -65,6 +70,7 @@ namespace osu.Game.Screens.Play
         private readonly BindableDouble volumeAdjustment = new BindableDouble(1);
 
         private AudioFilter lowPassFilter;
+        private AudioFilter highPassFilter;
 
         protected bool BackgroundBrightnessReduction
         {
@@ -135,36 +141,40 @@ namespace osu.Game.Screens.Play
             muteWarningShownOnce = sessionStatics.GetBindable<bool>(Static.MutedAudioNotificationShownOnce);
             batteryWarningShownOnce = sessionStatics.GetBindable<bool>(Static.LowBatteryNotificationShownOnce);
 
-            InternalChild = (content = new LogoTrackingContainer
+            InternalChildren = new Drawable[]
             {
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                RelativeSizeAxes = Axes.Both,
-            }).WithChildren(new Drawable[]
-            {
-                MetadataInfo = new BeatmapMetadataDisplay(Beatmap.Value, Mods, content.LogoFacade)
+                (content = new LogoTrackingContainer
                 {
-                    Alpha = 0,
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                },
-                PlayerSettings = new FillFlowContainer<PlayerSettingsGroup>
+                    RelativeSizeAxes = Axes.Both,
+                }).WithChildren(new Drawable[]
                 {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.TopRight,
-                    AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(0, 20),
-                    Margin = new MarginPadding(25),
-                    Children = new PlayerSettingsGroup[]
+                    MetadataInfo = new BeatmapMetadataDisplay(Beatmap.Value, Mods, content.LogoFacade)
                     {
-                        VisualSettings = new VisualSettings(),
-                        new InputSettings()
-                    }
-                },
-                idleTracker = new IdleTracker(750),
-                lowPassFilter = new AudioFilter(audio.TrackMixer)
-            });
+                        Alpha = 0,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                    },
+                    PlayerSettings = new FillFlowContainer<PlayerSettingsGroup>
+                    {
+                        Anchor = Anchor.TopRight,
+                        Origin = Anchor.TopRight,
+                        AutoSizeAxes = Axes.Both,
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 20),
+                        Margin = new MarginPadding(25),
+                        Children = new PlayerSettingsGroup[]
+                        {
+                            VisualSettings = new VisualSettings(),
+                            new InputSettings()
+                        }
+                    },
+                    idleTracker = new IdleTracker(750),
+                }),
+                lowPassFilter = new AudioFilter(audio.TrackMixer),
+                highPassFilter = new AudioFilter(audio.TrackMixer, BQFType.HighPass)
+            };
 
             if (Beatmap.Value.BeatmapInfo.EpilepsyWarning)
             {
@@ -195,7 +205,6 @@ namespace osu.Game.Screens.Play
                     epilepsyWarning.DimmableBackground = b;
             });
 
-            lowPassFilter.CutoffTo(500, 100, Easing.OutCubic);
             Beatmap.Value.Track.AddAdjustment(AdjustableProperty.Volume, volumeAdjustment);
 
             content.ScaleTo(0.7f);
@@ -206,7 +215,7 @@ namespace osu.Game.Screens.Play
 
             // after an initial delay, start the debounced load check.
             // this will continue to execute even after resuming back on restart.
-            Scheduler.Add(new ScheduledDelegate(pushWhenLoaded, Clock.CurrentTime + 1800, 0));
+            Scheduler.Add(new ScheduledDelegate(pushWhenLoaded, Clock.CurrentTime + PlayerPushDelay, 0));
 
             showMuteWarningIfNeeded();
             showBatteryWarningIfNeeded();
@@ -235,20 +244,24 @@ namespace osu.Game.Screens.Play
             Beatmap.Value.Track.Stop();
             Beatmap.Value.Track.RemoveAdjustment(AdjustableProperty.Volume, volumeAdjustment);
             lowPassFilter.CutoffTo(AudioFilter.MAX_LOWPASS_CUTOFF);
+            highPassFilter.CutoffTo(0);
         }
 
         public override bool OnExiting(IScreen next)
         {
             cancelLoad();
+            ContentOut();
 
-            content.ScaleTo(0.7f, 150, Easing.InQuint);
-            this.FadeOut(150);
+            // If the load sequence was interrupted, the epilepsy warning may already be displayed (or in the process of being displayed).
+            epilepsyWarning?.Hide();
+
+            // Ensure the screen doesn't expire until all the outwards fade operations have completed.
+            this.Delay(CONTENT_OUT_DURATION).FadeOut();
 
             ApplyToBackground(b => b.IgnoreUserSettings.Value = true);
 
             BackgroundBrightnessReduction = false;
             Beatmap.Value.Track.RemoveAdjustment(AdjustableProperty.Volume, volumeAdjustment);
-            lowPassFilter.CutoffTo(AudioFilter.MAX_LOWPASS_CUTOFF, 100, Easing.InCubic);
 
             return base.OnExiting(next);
         }
@@ -259,9 +272,9 @@ namespace osu.Game.Screens.Play
 
             const double duration = 300;
 
-            if (!resuming) logo.MoveTo(new Vector2(0.5f), duration, Easing.In);
+            if (!resuming) logo.MoveTo(new Vector2(0.5f), duration, Easing.OutQuint);
 
-            logo.ScaleTo(new Vector2(0.15f), duration, Easing.In);
+            logo.ScaleTo(new Vector2(0.15f), duration, Easing.OutQuint);
             logo.FadeIn(350);
 
             Scheduler.AddDelayed(() =>
@@ -344,17 +357,21 @@ namespace osu.Game.Screens.Play
 
             content.FadeInFromZero(400);
             content.ScaleTo(1, 650, Easing.OutQuint).Then().Schedule(prepareNewPlayer);
+            lowPassFilter.CutoffTo(1000, 650, Easing.OutQuint);
+            highPassFilter.CutoffTo(300).Then().CutoffTo(0, 1250); // 1250 is to line up with the appearance of MetadataInfo (750 delay + 500 fade-in)
 
             ApplyToBackground(b => b?.FadeColour(Color4.White, 800, Easing.OutQuint));
         }
 
-        private void contentOut()
+        protected virtual void ContentOut()
         {
             // Ensure the logo is no longer tracking before we scale the content
             content.StopTracking();
 
-            content.ScaleTo(0.7f, 300, Easing.InQuint);
-            content.FadeOut(250);
+            content.ScaleTo(0.7f, CONTENT_OUT_DURATION * 2, Easing.OutQuint);
+            content.FadeOut(CONTENT_OUT_DURATION, Easing.OutQuint);
+            lowPassFilter.CutoffTo(AudioFilter.MAX_LOWPASS_CUTOFF, CONTENT_OUT_DURATION);
+            highPassFilter.CutoffTo(0, CONTENT_OUT_DURATION);
         }
 
         private void pushWhenLoaded()
@@ -379,9 +396,9 @@ namespace osu.Game.Screens.Play
                 // ensure that once we have reached this "point of no return", readyForPush will be false for all future checks (until a new player instance is prepared).
                 var consumedPlayer = consumePlayer();
 
-                contentOut();
+                ContentOut();
 
-                TransformSequence<PlayerLoader> pushSequence = this.Delay(250);
+                TransformSequence<PlayerLoader> pushSequence = this.Delay(CONTENT_OUT_DURATION);
 
                 // only show if the warning was created (i.e. the beatmap needs it)
                 // and this is not a restart of the map (the warning expires after first load).
@@ -399,6 +416,11 @@ namespace osu.Game.Screens.Play
                             epilepsyWarning.Expire();
                         })
                         .Delay(EpilepsyWarning.FADE_DURATION);
+                }
+                else
+                {
+                    // This goes hand-in-hand with the restoration of low pass filter in contentOut().
+                    this.TransformBindableTo(volumeAdjustment, 0, CONTENT_OUT_DURATION, Easing.OutCubic);
                 }
 
                 pushSequence.Schedule(() =>

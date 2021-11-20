@@ -79,9 +79,9 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
             {
                 case IHasDistance distanceData:
                 {
-                    if (shouldConvertSliderToHits(obj, beatmap, distanceData, out var taikoDuration, out var tickSpacing))
+                    if (shouldConvertSliderToHits(obj, beatmap, distanceData, out int taikoDuration, out double tickSpacing))
                     {
-                        List<IList<HitSampleInfo>> allSamples = obj is IHasPathWithRepeats curveData ? curveData.NodeSamples : new List<IList<HitSampleInfo>>(new[] { samples });
+                        IList<IList<HitSampleInfo>> allSamples = obj is IHasPathWithRepeats curveData ? curveData.NodeSamples : new List<IList<HitSampleInfo>>(new[] { samples });
 
                         int i = 0;
 
@@ -154,7 +154,7 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
             double distance = distanceData.Distance * spans * LegacyBeatmapEncoder.LEGACY_TAIKO_VELOCITY_MULTIPLIER;
 
             TimingControlPoint timingPoint = beatmap.ControlPointInfo.TimingPointAt(obj.StartTime);
-            DifficultyControlPoint difficultyPoint = beatmap.ControlPointInfo.DifficultyPointAt(obj.StartTime);
+            DifficultyControlPoint difficultyPoint = obj.DifficultyControlPoint;
 
             double beatLength;
 #pragma warning disable 618
@@ -162,7 +162,7 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
 #pragma warning restore 618
                 beatLength = timingPoint.BeatLength * legacyDifficultyPoint.BpmMultiplier;
             else
-                beatLength = timingPoint.BeatLength / difficultyPoint.SpeedMultiplier;
+                beatLength = timingPoint.BeatLength / difficultyPoint.SliderVelocity;
 
             double sliderScoringPointDistance = osu_base_scoring_distance * beatmap.Difficulty.SliderMultiplier / beatmap.Difficulty.SliderTickRate;
 
@@ -191,7 +191,7 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
 
         protected override Beatmap<TaikoHitObject> CreateBeatmap() => new TaikoBeatmap();
 
-        private class TaikoMultiplierAppliedDifficulty : BeatmapDifficulty
+        internal class TaikoMultiplierAppliedDifficulty : BeatmapDifficulty
         {
             public TaikoMultiplierAppliedDifficulty(IBeatmapDifficultyInfo difficulty)
             {
@@ -209,7 +209,7 @@ namespace osu.Game.Rulesets.Taiko.Beatmaps
             {
                 base.CopyTo(other);
                 if (!(other is TaikoMultiplierAppliedDifficulty))
-                    SliderMultiplier /= LegacyBeatmapEncoder.LEGACY_TAIKO_VELOCITY_MULTIPLIER;
+                    other.SliderMultiplier /= LegacyBeatmapEncoder.LEGACY_TAIKO_VELOCITY_MULTIPLIER;
             }
 
             public override void CopyFrom(IBeatmapDifficultyInfo other)

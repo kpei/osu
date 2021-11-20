@@ -24,7 +24,7 @@ namespace osu.Game.Rulesets.Objects.Legacy
 
         public double Distance => Path.Distance;
 
-        public List<IList<HitSampleInfo>> NodeSamples { get; set; }
+        public IList<IList<HitSampleInfo>> NodeSamples { get; set; }
         public int RepeatCount { get; set; }
 
         [JsonIgnore]
@@ -43,9 +43,8 @@ namespace osu.Game.Rulesets.Objects.Legacy
             base.ApplyDefaultsToSelf(controlPointInfo, difficulty);
 
             TimingControlPoint timingPoint = controlPointInfo.TimingPointAt(StartTime);
-            DifficultyControlPoint difficultyPoint = controlPointInfo.DifficultyPointAt(StartTime);
 
-            double scoringDistance = base_scoring_distance * difficulty.SliderMultiplier * difficultyPoint.SpeedMultiplier;
+            double scoringDistance = base_scoring_distance * difficulty.SliderMultiplier * DifficultyControlPoint.SliderVelocity;
 
             Velocity = scoringDistance / timingPoint.BeatLength;
         }

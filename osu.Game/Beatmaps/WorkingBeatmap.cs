@@ -27,9 +27,7 @@ namespace osu.Game.Beatmaps
     public abstract class WorkingBeatmap : IWorkingBeatmap
     {
         public readonly BeatmapInfo BeatmapInfo;
-
         public readonly BeatmapSetInfo BeatmapSetInfo;
-
         public readonly BeatmapMetadata Metadata;
 
         protected AudioManager AudioManager { get; }
@@ -81,147 +79,148 @@ namespace osu.Game.Beatmaps
         /// <returns>The applicable <see cref="IBeatmapConverter"/>.</returns>
         protected virtual IBeatmapConverter CreateBeatmapConverter(IBeatmap beatmap, Ruleset ruleset) => ruleset.CreateBeatmapConverter(beatmap);
 
-        public virtual IBeatmap GetPlayableBeatmap(RulesetInfo ruleset, IReadOnlyList<Mod> mods = null, TimeSpan? timeout = null)
+        public virtual IBeatmap GetPlayableBeatmap(IRulesetInfo ruleset, IReadOnlyList<Mod> mods = null, CancellationToken? cancellationToken = null)
         {
-            using (var cancellationSource = createCancellationTokenSource(timeout))
+            var token = cancellationToken ??
+                        // don't apply the default timeout when debugger is attached (may be breakpointing / debugging).
+                        (Debugger.IsAttached ? new CancellationToken() : new CancellationTokenSource(10000).Token);
+
+            mods ??= Array.Empty<Mod>();
+
+            var rulesetInstance = ruleset.CreateInstance();
+
+            if (rulesetInstance == null)
+                throw new RulesetLoadException("Creating ruleset instance failed when attempting to create playable beatmap.");
+
+            IBeatmapConverter converter = CreateBeatmapConverter(Beatmap, rulesetInstance);
+
+            // Check if the beatmap can be converted
+            if (Beatmap.HitObjects.Count > 0 && !converter.CanConvert())
+                throw new BeatmapInvalidForRulesetException($"{nameof(Beatmaps.Beatmap)} can not be converted for the ruleset (ruleset: {ruleset.InstantiationInfo}, converter: {converter}).");
+
+            // Apply conversion mods
+            foreach (var mod in mods.OfType<IApplicableToBeatmapConverter>())
             {
-                mods ??= Array.Empty<Mod>();
-
-                var rulesetInstance = ruleset.CreateInstance();
-
-                IBeatmapConverter converter = CreateBeatmapConverter(Beatmap, rulesetInstance);
-
-                // Check if the beatmap can be converted
-                if (Beatmap.HitObjects.Count > 0 && !converter.CanConvert())
-                    throw new BeatmapInvalidForRulesetException($"{nameof(Beatmaps.Beatmap)} can not be converted for the ruleset (ruleset: {ruleset.InstantiationInfo}, converter: {converter}).");
-
-                // Apply conversion mods
-                foreach (var mod in mods.OfType<IApplicableToBeatmapConverter>())
-                {
-                    if (cancellationSource.IsCancellationRequested)
-                        throw new BeatmapLoadTimeoutException(BeatmapInfo);
-
-                    mod.ApplyToBeatmapConverter(converter);
-                }
-
-                // Convert
-                IBeatmap converted = converter.Convert(cancellationSource.Token);
-
-                // Apply conversion mods to the result
-                foreach (var mod in mods.OfType<IApplicableAfterBeatmapConversion>())
-                {
-                    if (cancellationSource.IsCancellationRequested)
-                        throw new BeatmapLoadTimeoutException(BeatmapInfo);
-
-                    mod.ApplyToBeatmap(converted);
-                }
-
-                // Apply difficulty mods
-                if (mods.Any(m => m is IApplicableToDifficulty))
-                {
-                    foreach (var mod in mods.OfType<IApplicableToDifficulty>())
-                    {
-                        if (cancellationSource.IsCancellationRequested)
-                            throw new BeatmapLoadTimeoutException(BeatmapInfo);
-
-                        mod.ApplyToDifficulty(converted.Difficulty);
-                    }
-                }
-
-                IBeatmapProcessor processor = rulesetInstance.CreateBeatmapProcessor(converted);
-
-                foreach (var mod in mods.OfType<IApplicableToBeatmapProcessor>())
-                    mod.ApplyToBeatmapProcessor(processor);
-
-                processor?.PreProcess();
-
-                // Compute default values for hitobjects, including creating nested hitobjects in-case they're needed
-                try
-                {
-                    foreach (var obj in converted.HitObjects)
-                    {
-                        if (cancellationSource.IsCancellationRequested)
-                            throw new BeatmapLoadTimeoutException(BeatmapInfo);
-
-                        obj.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty, cancellationSource.Token);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
+                if (token.IsCancellationRequested)
                     throw new BeatmapLoadTimeoutException(BeatmapInfo);
-                }
 
-                foreach (var mod in mods.OfType<IApplicableToHitObject>())
-                {
-                    foreach (var obj in converted.HitObjects)
-                    {
-                        if (cancellationSource.IsCancellationRequested)
-                            throw new BeatmapLoadTimeoutException(BeatmapInfo);
-
-                        mod.ApplyToHitObject(obj);
-                    }
-                }
-
-                processor?.PostProcess();
-
-                foreach (var mod in mods.OfType<IApplicableToBeatmap>())
-                {
-                    cancellationSource.Token.ThrowIfCancellationRequested();
-                    mod.ApplyToBeatmap(converted);
-                }
-
-                return converted;
+                mod.ApplyToBeatmapConverter(converter);
             }
+
+            // Convert
+            IBeatmap converted = converter.Convert(token);
+
+            // Apply conversion mods to the result
+            foreach (var mod in mods.OfType<IApplicableAfterBeatmapConversion>())
+            {
+                if (token.IsCancellationRequested)
+                    throw new BeatmapLoadTimeoutException(BeatmapInfo);
+
+                mod.ApplyToBeatmap(converted);
+            }
+
+            // Apply difficulty mods
+            if (mods.Any(m => m is IApplicableToDifficulty))
+            {
+                foreach (var mod in mods.OfType<IApplicableToDifficulty>())
+                {
+                    if (token.IsCancellationRequested)
+                        throw new BeatmapLoadTimeoutException(BeatmapInfo);
+
+                    mod.ApplyToDifficulty(converted.Difficulty);
+                }
+            }
+
+            IBeatmapProcessor processor = rulesetInstance.CreateBeatmapProcessor(converted);
+
+            foreach (var mod in mods.OfType<IApplicableToBeatmapProcessor>())
+                mod.ApplyToBeatmapProcessor(processor);
+
+            processor?.PreProcess();
+
+            // Compute default values for hitobjects, including creating nested hitobjects in-case they're needed
+            try
+            {
+                foreach (var obj in converted.HitObjects)
+                {
+                    if (token.IsCancellationRequested)
+                        throw new BeatmapLoadTimeoutException(BeatmapInfo);
+
+                    obj.ApplyDefaults(converted.ControlPointInfo, converted.Difficulty, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw new BeatmapLoadTimeoutException(BeatmapInfo);
+            }
+
+            foreach (var mod in mods.OfType<IApplicableToHitObject>())
+            {
+                foreach (var obj in converted.HitObjects)
+                {
+                    if (token.IsCancellationRequested)
+                        throw new BeatmapLoadTimeoutException(BeatmapInfo);
+
+                    mod.ApplyToHitObject(obj);
+                }
+            }
+
+            processor?.PostProcess();
+
+            foreach (var mod in mods.OfType<IApplicableToBeatmap>())
+            {
+                token.ThrowIfCancellationRequested();
+                mod.ApplyToBeatmap(converted);
+            }
+
+            return converted;
         }
 
         private CancellationTokenSource loadCancellation = new CancellationTokenSource();
 
-        /// <summary>
-        /// Beings loading the contents of this <see cref="WorkingBeatmap"/> asynchronously.
-        /// </summary>
-        public void BeginAsyncLoad()
-        {
-            loadBeatmapAsync();
-        }
+        public void BeginAsyncLoad() => loadBeatmapAsync();
 
-        /// <summary>
-        /// Cancels the asynchronous loading of the contents of this <see cref="WorkingBeatmap"/>.
-        /// </summary>
         public void CancelAsyncLoad()
         {
-            loadCancellation?.Cancel();
-            loadCancellation = new CancellationTokenSource();
+            lock (beatmapFetchLock)
+            {
+                loadCancellation?.Cancel();
+                loadCancellation = new CancellationTokenSource();
 
-            if (beatmapLoadTask?.IsCompleted != true)
-                beatmapLoadTask = null;
+                if (beatmapLoadTask?.IsCompleted != true)
+                    beatmapLoadTask = null;
+            }
         }
 
-        private CancellationTokenSource createCancellationTokenSource(TimeSpan? timeout)
-        {
-            if (Debugger.IsAttached)
-                // ignore timeout when debugger is attached (may be breakpointing / debugging).
-                return new CancellationTokenSource();
+        private readonly object beatmapFetchLock = new object();
 
-            return new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(10));
+        private Task<IBeatmap> loadBeatmapAsync()
+        {
+            lock (beatmapFetchLock)
+            {
+                return beatmapLoadTask ??= Task.Factory.StartNew(() =>
+                {
+                    // Todo: Handle cancellation during beatmap parsing
+                    var b = GetBeatmap() ?? new Beatmap();
+
+                    // The original beatmap version needs to be preserved as the database doesn't contain it
+                    BeatmapInfo.BeatmapVersion = b.BeatmapInfo.BeatmapVersion;
+
+                    // Use the database-backed info for more up-to-date values (beatmap id, ranked status, etc)
+                    b.BeatmapInfo = BeatmapInfo;
+
+                    return b;
+                }, loadCancellation.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }
         }
-
-        private Task<IBeatmap> loadBeatmapAsync() => beatmapLoadTask ??= Task.Factory.StartNew(() =>
-        {
-            // Todo: Handle cancellation during beatmap parsing
-            var b = GetBeatmap() ?? new Beatmap();
-
-            // The original beatmap version needs to be preserved as the database doesn't contain it
-            BeatmapInfo.BeatmapVersion = b.BeatmapInfo.BeatmapVersion;
-
-            // Use the database-backed info for more up-to-date values (beatmap id, ranked status, etc)
-            b.BeatmapInfo = BeatmapInfo;
-
-            return b;
-        }, loadCancellation.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
         public override string ToString() => BeatmapInfo.ToString();
 
         public virtual bool BeatmapLoaded => beatmapLoadTask?.IsCompleted ?? false;
+
+        IBeatmapInfo IWorkingBeatmap.BeatmapInfo => BeatmapInfo;
+        IBeatmapMetadataInfo IWorkingBeatmap.Metadata => Metadata;
+        IBeatmapSetInfo IWorkingBeatmap.BeatmapSetInfo => BeatmapSetInfo;
 
         public IBeatmap Beatmap
         {
@@ -262,9 +261,6 @@ namespace osu.Game.Beatmaps
         [NotNull]
         public Track LoadTrack() => loadedTrack = GetBeatmapTrack() ?? GetVirtualTrack(1000);
 
-        /// <summary>
-        /// Reads the correct track restart point from beatmap metadata and sets looping to enabled.
-        /// </summary>
         public void PrepareTrackForPreviewLooping()
         {
             Track.Looping = true;

@@ -251,7 +251,7 @@ namespace osu.Game.Beatmaps.Formats
                     break;
 
                 case @"Version":
-                    beatmap.BeatmapInfo.Version = pair.Value;
+                    beatmap.BeatmapInfo.DifficultyName = pair.Value;
                     break;
 
                 case @"Source":
@@ -263,11 +263,11 @@ namespace osu.Game.Beatmaps.Formats
                     break;
 
                 case @"BeatmapID":
-                    beatmap.BeatmapInfo.OnlineBeatmapID = Parsing.ParseInt(pair.Value);
+                    beatmap.BeatmapInfo.OnlineID = Parsing.ParseInt(pair.Value);
                     break;
 
                 case @"BeatmapSetID":
-                    beatmap.BeatmapInfo.BeatmapSet = new BeatmapSetInfo { OnlineBeatmapSetID = Parsing.ParseInt(pair.Value) };
+                    beatmap.BeatmapInfo.BeatmapSet = new BeatmapSetInfo { OnlineID = Parsing.ParseInt(pair.Value) };
                     break;
             }
         }
@@ -384,14 +384,21 @@ namespace osu.Game.Beatmaps.Formats
             addControlPoint(time, new LegacyDifficultyControlPoint(beatLength)
 #pragma warning restore 618
             {
-                SpeedMultiplier = speedMultiplier,
+                SliderVelocity = speedMultiplier,
             }, timingChange);
 
-            addControlPoint(time, new EffectControlPoint
+            var effectPoint = new EffectControlPoint
             {
                 KiaiMode = kiaiMode,
                 OmitFirstBarLine = omitFirstBarSignature,
-            }, timingChange);
+            };
+
+            bool isOsuRuleset = beatmap.BeatmapInfo.RulesetID == 0;
+            // scrolling rulesets use effect points rather than difficulty points for scroll speed adjustments.
+            if (!isOsuRuleset)
+                effectPoint.ScrollSpeed = speedMultiplier;
+
+            addControlPoint(time, effectPoint, timingChange);
 
             addControlPoint(time, new LegacySampleControlPoint
             {

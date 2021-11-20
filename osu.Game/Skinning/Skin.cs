@@ -3,8 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using osu.Framework.Audio.Sample;
 using osu.Framework.Bindables;
@@ -13,6 +15,7 @@ using osu.Framework.Graphics.OpenGL.Textures;
 using osu.Framework.Graphics.Textures;
 using osu.Framework.Logging;
 using osu.Game.Audio;
+using osu.Game.Extensions;
 using osu.Game.IO;
 using osu.Game.Screens.Play.HUD;
 
@@ -21,8 +24,9 @@ namespace osu.Game.Skinning
     public abstract class Skin : IDisposable, ISkin
     {
         public readonly SkinInfo SkinInfo;
+        private readonly IStorageResourceProvider resources;
 
-        public SkinConfiguration Configuration { get; protected set; }
+        public SkinConfiguration Configuration { get; set; }
 
         public IDictionary<SkinnableTarget, SkinnableInfo[]> DrawableComponentInfo => drawableComponentInfo;
 
@@ -36,9 +40,18 @@ namespace osu.Game.Skinning
 
         public abstract IBindable<TValue> GetConfig<TLookup, TValue>(TLookup lookup);
 
-        protected Skin(SkinInfo skin, IStorageResourceProvider resources)
+        protected Skin(SkinInfo skin, IStorageResourceProvider resources, [CanBeNull] Stream configurationStream = null)
         {
             SkinInfo = skin;
+            this.resources = resources;
+
+            configurationStream ??= getConfigurationStream();
+
+            if (configurationStream != null)
+                // stream will be closed after use by LineBufferedReader.
+                ParseConfigurationStream(configurationStream);
+            else
+                Configuration = new SkinConfiguration();
 
             // we may want to move this to some kind of async operation in the future.
             foreach (SkinnableTarget skinnableTarget in Enum.GetValues(typeof(SkinnableTarget)))
@@ -51,7 +64,7 @@ namespace osu.Game.Skinning
                 if (fileInfo == null)
                     continue;
 
-                var bytes = resources?.Files.Get(fileInfo.FileInfo.StoragePath);
+                byte[] bytes = resources?.Files.Get(fileInfo.FileInfo.GetStoragePath());
 
                 if (bytes == null)
                     continue;
@@ -71,6 +84,22 @@ namespace osu.Game.Skinning
                     Logger.Error(ex, "Failed to load skin configuration.");
                 }
             }
+        }
+
+        protected virtual void ParseConfigurationStream(Stream stream)
+        {
+            using (LineBufferedReader reader = new LineBufferedReader(stream, true))
+                Configuration = new LegacySkinDecoder().Decode(reader);
+        }
+
+        private Stream getConfigurationStream()
+        {
+            string path = SkinInfo.Files.SingleOrDefault(f => f.Filename.Equals(@"skin.ini", StringComparison.OrdinalIgnoreCase))?.FileInfo.GetStoragePath();
+
+            if (string.IsNullOrEmpty(path))
+                return null;
+
+            return resources?.Files.GetStream(path);
         }
 
         /// <summary>

@@ -54,7 +54,7 @@ namespace osu.Game.Tests.Visual.Gameplay
                                 ScoreInfo = { BeatmapInfo = gameplayState.Beatmap.BeatmapInfo }
                             })
                             {
-                                ScreenSpaceToGamefield = pos => recordingManager.ToLocalSpace(pos)
+                                ScreenSpaceToGamefield = pos => recordingManager?.ToLocalSpace(pos) ?? Vector2.Zero,
                             },
                             Child = new Container
                             {
@@ -84,7 +84,7 @@ namespace osu.Game.Tests.Visual.Gameplay
                         {
                             ReplayInputHandler = new TestFramedReplayInputHandler(replay)
                             {
-                                GamefieldToScreenSpace = pos => playbackManager.ToScreenSpace(pos),
+                                GamefieldToScreenSpace = pos => playbackManager?.ToScreenSpace(pos) ?? Vector2.Zero,
                             },
                             Child = new Container
                             {
@@ -164,6 +164,9 @@ namespace osu.Game.Tests.Visual.Gameplay
 
         public bool OnPressed(KeyBindingPressEvent<TestAction> e)
         {
+            if (e.Repeat)
+                return false;
+
             box.Colour = Color4.White;
             return true;
         }

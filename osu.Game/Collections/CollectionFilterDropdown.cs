@@ -39,7 +39,7 @@ namespace osu.Game.Collections
         }
 
         private readonly IBindableList<BeatmapCollection> collections = new BindableList<BeatmapCollection>();
-        private readonly IBindableList<BeatmapInfo> beatmaps = new BindableList<BeatmapInfo>();
+        private readonly IBindableList<IBeatmapInfo> beatmaps = new BindableList<IBeatmapInfo>();
         private readonly BindableList<CollectionFilterMenuItem> filters = new BindableList<CollectionFilterMenuItem>();
 
         [Resolved(CanBeNull = true)]
@@ -181,7 +181,11 @@ namespace osu.Game.Collections
                 MaxHeight = 200;
             }
 
-            protected override DrawableDropdownMenuItem CreateDrawableDropdownMenuItem(MenuItem item) => new CollectionDropdownMenuItem(item);
+            protected override DrawableDropdownMenuItem CreateDrawableDropdownMenuItem(MenuItem item) => new CollectionDropdownMenuItem(item)
+            {
+                BackgroundColourHover = HoverColour,
+                BackgroundColourSelected = SelectionColour
+            };
         }
 
         protected class CollectionDropdownMenuItem : OsuDropdownMenu.DrawableOsuDropdownMenuItem
@@ -196,7 +200,7 @@ namespace osu.Game.Collections
             private IBindable<WorkingBeatmap> beatmap { get; set; }
 
             [CanBeNull]
-            private readonly BindableList<BeatmapInfo> collectionBeatmaps;
+            private readonly BindableList<IBeatmapInfo> collectionBeatmaps;
 
             [NotNull]
             private readonly Bindable<string> collectionName;
