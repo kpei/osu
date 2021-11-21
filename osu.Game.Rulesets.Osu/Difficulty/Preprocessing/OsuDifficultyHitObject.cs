@@ -32,14 +32,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
         private readonly OsuHitObject lastLastObject;
         private readonly OsuHitObject lastObject;
-        public readonly OsuHitObject nextObject;
 
-        public OsuDifficultyHitObject(HitObject nextObject, HitObject hitObject, HitObject lastLastObject, HitObject lastObject, double clockRate)
+        public OsuDifficultyHitObject(HitObject hitObject, HitObject lastLastObject, HitObject lastObject, double clockRate)
             : base(hitObject, lastObject, clockRate)
         {
             this.lastLastObject = (OsuHitObject)lastLastObject;
             this.lastObject = (OsuHitObject)lastObject;
-            this.nextObject = (OsuHitObject)nextObject;
 
             setDistances();
         }
