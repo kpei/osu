@@ -96,18 +96,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the expected number of objects the player will successfully hit on a map given a skill level.
+        /// Calculates the probability a player will FC the map given a skill level.
         /// </summary>
         /// <param name="skill">
         /// The player's skill level.
         /// </param>
         /// <returns>
-        /// The expected number of objects the player will successfully hit.
+        /// The probability of FC'ing the map.
         /// </returns>
-        private double getExpectedHits(double skill)
+        private double getFcProbability(double skill)
         {
-            double expectedHits = difficulties.Sum(t => hitProbabilityOf(t, skill));
-            return expectedHits;
+            double fcProbability = 1;
+
+            foreach (double difficulty in difficulties)
+            {
+                fcProbability *= hitProbabilityOf(difficulty, skill);
+            }
+
+            return fcProbability;
         }
 
         protected override void Process(DifficultyHitObject current)
@@ -121,18 +127,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             const double guess_lower_bound = 0.0;
             const double guess_upper_bound = 2.0;
 
-            double expectedHitsMinusThreshold(double skill)
+            double fcProbabilityMinusThreshold(double skill)
             {
-                const double threshold = 4;
-                double expectedHits = getExpectedHits(skill);
-                double result = difficulties.Count - expectedHits - threshold;
-                return result;
+                const double threshold = 0.0183156389;
+                double fcProbability = getFcProbability(skill);
+                return fcProbability - threshold;
             }
 
             try
             {
-                // Find the skill level so that the expected number of misses is 1.
-                double skillLevel = Bisection.FindRootExpand(expectedHitsMinusThreshold, guess_lower_bound, guess_upper_bound);
+                // Find the skill level so that the probability of FC'ing is the threshold.
+                double skillLevel = Bisection.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
                 return skillLevel;
             }
             catch (NonConvergenceException)
