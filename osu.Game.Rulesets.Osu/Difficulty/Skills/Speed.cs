@@ -13,11 +13,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// <summary>
     /// Represents the skill required to press keys with regards to keeping up with the speed at which objects need to be hit.
     /// </summary>
-    public class Speed : Skill
+    public class Speed : StrainSkill
     {
-        private const double strain_decay_base = 1 / Math.E;
+        private const double strain_decay_base = 0.3;
         private double currentStrain;
-        private double maxStrain;
 
         public Speed(Mod[] mods)
             : base(mods)
@@ -33,20 +32,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return 1 / currentObject.DeltaTime;
         }
 
-        protected override void Process(DifficultyHitObject current)
+        private double strainDecay(double ms) => Math.Pow(strain_decay_base, ms / 1000);
+        protected override double CalculateInitialStrain(double time) => currentStrain * strainDecay(time - Previous[0].StartTime);
+
+        protected override double StrainValueAt(DifficultyHitObject current)
         {
+            currentStrain *= strainDecay(current.DeltaTime);
             currentStrain += strainValueOf(current);
-            currentStrain *= Math.Pow(strain_decay_base, current.DeltaTime / 1000);
-
-            if (currentStrain > maxStrain)
-            {
-                maxStrain = currentStrain;
-            }
-        }
-
-        public override double DifficultyValue()
-        {
-            return maxStrain;
+            return currentStrain;
         }
     }
 }
