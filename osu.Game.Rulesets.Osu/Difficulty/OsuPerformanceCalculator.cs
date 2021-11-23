@@ -115,7 +115,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 return 0;
 
-            double deviationScaling = SpecialFunctions.Erf(31.5 / (Math.Sqrt(2) * (double)deviation));
+            double deviationScaling = SpecialFunctions.Erf(32 / (Math.Sqrt(2) * (double)deviation));
             aimValue *= deviationScaling;
 
             return aimValue;
@@ -129,7 +129,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 return 0;
 
-            double deviationScaling = SpecialFunctions.Erf(13 / (Math.Sqrt(2) * (double)deviation));
+            double deviationScaling = SpecialFunctions.Erf(13.333 / (Math.Sqrt(2) * (double)deviation));
             speedValue *= deviationScaling;
 
             if (mods.Any(h => h is OsuModHidden))
@@ -197,7 +197,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 return 0;
 
-            double deviationScaling = SpecialFunctions.Erf(31.5 / (Math.Sqrt(2) * (double)deviation));
+            double deviationScaling = SpecialFunctions.Erf(32 / (Math.Sqrt(2) * (double)deviation));
             flashlightValue *= deviationScaling;
 
             return flashlightValue;
@@ -209,10 +209,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return null;
 
             double modifiedAccuracy = 1 - (double)(2 * countMeh + countOk + 1) / (Attributes.HitCircleCount - countMiss + 2);
+
             if (modifiedAccuracy < 0)
                 return null;
 
-            double deviation = (79.5 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
+            double deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
             return deviation;
         }
 
