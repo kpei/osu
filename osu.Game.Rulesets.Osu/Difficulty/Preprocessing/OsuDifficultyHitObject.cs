@@ -30,6 +30,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         /// </summary>
         public double? Angle { get; private set; }
 
+        /// <summary>
+        /// The starting X-position of this <see cref="OsuDifficultyHitObject"/>.
+        /// </summary>
+        public double X { get; set; }
+
+        /// <summary>
+        /// The starting Y-position of this <see cref="OsuDifficultyHitObject"/>.
+        /// </summary>
+        public double Y { get; set; }
+
         private readonly OsuHitObject lastLastObject;
         private readonly OsuHitObject lastObject;
 
@@ -70,6 +80,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
 
                 Angle = Math.Abs(Math.Atan2(det, dot));
             }
+
+            X = BaseObject.X;
+            Y = BaseObject.Y;
         }
 
         private void computeSliderCursorPosition(Slider slider)

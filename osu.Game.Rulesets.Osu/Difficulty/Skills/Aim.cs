@@ -4,7 +4,6 @@
 using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MathNet.Numerics.RootFinding;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
@@ -19,10 +18,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Aim : Skill
     {
-        protected override int HistoryLength => 2;
         private readonly double radius;
         private readonly double greatHitWindow;
-        private readonly List<double> difficulties = new List<double>();
+        private readonly List<(double, double)> difficulties = new List<(double, double)>();
 
         public Aim(Mod[] mods, double radius, double greatHitWindow)
             : base(mods)
@@ -41,20 +39,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// <returns>
         /// The difficulty of the object.
         /// </returns>
-        private double difficultyValueOf(DifficultyHitObject current)
+        private (double, double) difficultyValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
+            var previousObject = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
 
             if (currentObject.BaseObject is Spinner)
-                return 0;
+                return (0, 0);
 
             double extraDeltaTime = 0;
 
-            if (Previous.Count > 0)
+            if (previousObject != null)
             {
-                if (Previous[0].DeltaTime > currentObject.DeltaTime)
+                if (previousObject.DeltaTime > currentObject.DeltaTime)
                 {
-                    double timeDifference = Previous[0].DeltaTime - currentObject.DeltaTime;
+                    double timeDifference = previousObject.DeltaTime - currentObject.DeltaTime;
                     extraDeltaTime += Math.Min(greatHitWindow, timeDifference);
                 }
             }
@@ -66,9 +65,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             extraDeltaTime = Math.Min(greatHitWindow, extraDeltaTime);
             double effectiveDeltaTime = currentObject.DeltaTime + extraDeltaTime;
 
-            double difficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / effectiveDeltaTime;
+            double xDifficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / effectiveDeltaTime;
+            double yDifficulty = 0;
 
-            return difficulty;
+            return (xDifficulty, yDifficulty);
         }
 
         /// <summary>
@@ -108,9 +108,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double fcProbability = 1;
 
-            foreach (double difficulty in difficulties)
+            foreach ((double xDifficulty, double yDifficulty) in difficulties)
             {
-                fcProbability *= hitProbabilityOf(difficulty, skill);
+                fcProbability *= hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
             }
 
             return fcProbability;
@@ -118,7 +118,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override void Process(DifficultyHitObject current)
         {
-            double difficulty = difficultyValueOf(current);
+            (double, double) difficulty = difficultyValueOf(current);
             difficulties.Add(difficulty);
         }
 
