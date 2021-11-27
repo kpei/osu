@@ -92,7 +92,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
 
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
-            double missPenalty = SpecialFunctions.ErfInv(1 - 4.0 / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 - 4.0 / totalHits);
+            double missPenalty = SpecialFunctions.ErfInv(1 + Math.Log(0.01) / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 + Math.Log(0.01) / totalHits);
             aimDifficulty *= missPenalty;
 
             double aimValue = Math.Pow(aimDifficulty, 3);

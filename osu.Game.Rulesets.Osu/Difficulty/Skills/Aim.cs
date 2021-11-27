@@ -129,7 +129,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double fcProbabilityMinusThreshold(double skill)
             {
-                const double threshold = 0.0183156389;
+                const double threshold = 0.01;
                 double fcProbability = getFcProbability(skill);
                 return fcProbability - threshold;
             }
