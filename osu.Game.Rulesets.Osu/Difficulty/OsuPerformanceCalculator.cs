@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics;
+using MathNet.Numerics.Distributions;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Mods;
@@ -27,6 +28,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
+
+        private const double global_probability_threshold = 0.01;
 
         public OsuPerformanceCalculator(Ruleset ruleset, DifficultyAttributes attributes, ScoreInfo score)
             : base(ruleset, attributes, score)
@@ -92,8 +95,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
 
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
-            double missPenalty = SpecialFunctions.ErfInv(1 + Math.Log(0.01) / totalHits - effectiveMissCount / totalHits) / SpecialFunctions.ErfInv(1 + Math.Log(0.01) / totalHits);
-            aimDifficulty *= missPenalty;
+            if (effectiveMissCount > 0)
+            {
+                double hitProbability = Beta.InvCDF(totalHits - effectiveMissCount + 1, effectiveMissCount + 1, global_probability_threshold);
+                double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(Math.Pow(global_probability_threshold, 1.0 / totalHits));
+                aimDifficulty *= missPenalty;
+            }
 
             double aimValue = Math.Pow(aimDifficulty, 3);
 
