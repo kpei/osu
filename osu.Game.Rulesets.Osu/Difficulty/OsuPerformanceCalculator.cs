@@ -193,19 +193,23 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double computeAccuracyValue()
         {
+            if (mods.Any(m => m is OsuModRelax))
+                return 0;
+
             if (Attributes.HitCircleCount == 0)
                 return 0;
 
             double? deviation = getDeviation();
 
             if (deviation == null)
-            {
                 return 0;
-            }
 
             double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 2);
 
-            if (mods.Any(m => m is OsuModHidden))
+            // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
+            if (mods.Any(m => m is OsuModBlinds))
+                accuracyValue *= 1.14;
+            else if (mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
             if (mods.Any(m => m is OsuModFlashlight))
                 accuracyValue *= 1.02;
