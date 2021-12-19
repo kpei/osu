@@ -19,14 +19,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Aim : Skill
     {
         private readonly double radius;
-        private readonly double greatHitWindow;
         private readonly List<(double, double)> difficulties = new List<(double, double)>();
 
-        public Aim(Mod[] mods, double radius, double greatHitWindow)
+        public Aim(Mod[] mods, double radius)
             : base(mods)
         {
             this.radius = radius;
-            this.greatHitWindow = greatHitWindow;
         }
 
         /// <summary>
@@ -42,30 +40,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private (double, double) difficultyValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
-            var previousObject = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
 
             if (currentObject.BaseObject is Spinner)
                 return (0, 0);
 
-            double extraDeltaTime = 0;
-
-            if (previousObject != null)
-            {
-                if (previousObject.DeltaTime > currentObject.DeltaTime)
-                {
-                    double timeDifference = previousObject.DeltaTime - currentObject.DeltaTime;
-                    extraDeltaTime += Math.Min(greatHitWindow, timeDifference);
-                }
-            }
-            else
-            {
-                extraDeltaTime += greatHitWindow;
-            }
-
-            extraDeltaTime = Math.Min(greatHitWindow, extraDeltaTime);
-            double effectiveDeltaTime = currentObject.DeltaTime + extraDeltaTime;
-
-            double xDifficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / effectiveDeltaTime;
+            double xDifficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / currentObject.DeltaTime;
             double yDifficulty = 0;
 
             return (xDifficulty, yDifficulty);
