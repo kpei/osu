@@ -117,7 +117,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount - countMiss == 0)
                 return aimValue;
 
-            double? deviation = calculateDeviation();
+            double? deviation = calculateDeviationAtProbabilityThreshold();
 
             if (deviation == null)
                 return 0;
@@ -131,7 +131,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double computeSpeedValue()
         {
             double speedValue = Math.Pow(Attributes.SpeedStrain, 3);
-            double? deviation = calculateDeviation();
+            double? deviation = calculateDeviationAtProbabilityThreshold();
 
             if (deviation == null)
                 return 0;
@@ -153,14 +153,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount == 0)
                 return 0;
 
-            double? deviation = calculateDeviation();
+            double? deviation = calculateDeviationAtProbabilityThreshold();
 
             if (deviation == null)
             {
                 return 0;
             }
 
-            double accuracyValue = 4750 / (double)(deviation * deviation);
+            double accuracyValue = 100 * Math.Pow(8 / (double)deviation, 2);
 
             if (mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
@@ -199,7 +199,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                                (totalHits > 200 ? 0.2 * Math.Min(1.0, (totalHits - 200) / 200.0) : 0.0);
 
             // Scale flashlight value with deviation.
-            double? deviation = calculateDeviation();
+            double? deviation = calculateDeviationAtProbabilityThreshold();
 
             if (deviation == null)
                 return 0;
@@ -210,17 +210,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return flashlightValue;
         }
 
-        private double? calculateDeviation()
+        private double? calculateDeviationAtProbabilityThreshold()
         {
             if (Attributes.HitCircleCount == 0)
                 return null;
 
-            double modifiedAccuracy = 1 - (double)(2 * countMeh + countOk + 1) / (Attributes.HitCircleCount - countMiss + 2);
-
-            if (modifiedAccuracy < 0)
-                return null;
-
-            double deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
+            double probabilityGreat = Beta.InvCDF(1 + countGreat - Attributes.SliderCount, 1 + countMeh + countOk, global_probability_threshold);
+            double deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(probabilityGreat));
             return deviation;
         }
 
