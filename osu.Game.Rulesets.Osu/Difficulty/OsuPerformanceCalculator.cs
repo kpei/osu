@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics;
-using MathNet.Numerics.Distributions;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Mods;
@@ -28,8 +27,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
-
-        private const double global_probability_threshold = 0.01;
 
         public OsuPerformanceCalculator(Ruleset ruleset, DifficultyAttributes attributes, ScoreInfo score)
             : base(ruleset, attributes, score)
@@ -68,11 +65,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double flashlightValue = computeFlashlightValue();
             double totalValue = multiplier * (aimValue + speedValue + accuracyValue + flashlightValue);
 
-            if (Attributes.ApproachRate > 10)
-            {
-                totalValue *= 1 + 0.1 * Math.Pow(Attributes.ApproachRate - 10, 2);
-            }
-
             if (categoryRatings != null)
             {
                 categoryRatings.Add("Aim", aimValue);
@@ -97,8 +89,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
             if (effectiveMissCount > 0)
             {
-                double hitProbability = Beta.InvCDF(totalHits - effectiveMissCount + 1, effectiveMissCount + 1, global_probability_threshold);
-                double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(Math.Pow(global_probability_threshold, 1.0 / totalHits));
+                double missPenalty = SpecialFunctions.ErfInv((totalHits - effectiveMissCount) / totalHits) / SpecialFunctions.ErfInv((totalHits - 0.5) / totalHits);
                 aimDifficulty *= missPenalty;
             }
 
@@ -117,10 +108,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount - countMiss == 0)
                 return aimValue;
 
-            double? deviation = calculateDeviationAtProbabilityThreshold();
+            double? deviation = calculateDeviation();
 
-            if (deviation == null)
-                return 0;
+            switch (deviation)
+            {
+                case null:
+                    return aimValue;
+
+                case double.PositiveInfinity:
+                    return 0;
+            }
 
             double deviationScaling = SpecialFunctions.Erf(32 / (Math.Sqrt(2) * (double)deviation));
             aimValue *= deviationScaling;
@@ -131,12 +128,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double computeSpeedValue()
         {
             double speedValue = Math.Pow(Attributes.SpeedStrain, 3);
-            double? deviation = calculateDeviationAtProbabilityThreshold();
+            double? deviation = calculateDeviation();
 
-            if (deviation == null)
-                return 0;
+            switch (deviation)
+            {
+                case null:
+                    return speedValue;
 
-            double deviationScaling = SpecialFunctions.Erf(13.333 / (Math.Sqrt(2) * (double)deviation));
+                case double.PositiveInfinity:
+                    return 0;
+            }
+
+            double deviationScaling = SpecialFunctions.Erf(13.33333 / (Math.Sqrt(2) * (double)deviation));
             speedValue *= deviationScaling;
 
             if (mods.Any(h => h is OsuModHidden))
@@ -153,14 +156,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (Attributes.HitCircleCount == 0)
                 return 0;
 
-            double? deviation = calculateDeviationAtProbabilityThreshold();
+            double? deviation = calculateDeviation();
 
             if (deviation == null)
             {
                 return 0;
             }
 
-            double accuracyValue = 100 * Math.Pow(8 / (double)deviation, 2);
+            double accuracyValue = 70 * Math.Pow(8 / (double)deviation, 2);
 
             if (mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
@@ -199,10 +202,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                                (totalHits > 200 ? 0.2 * Math.Min(1.0, (totalHits - 200) / 200.0) : 0.0);
 
             // Scale flashlight value with deviation.
-            double? deviation = calculateDeviationAtProbabilityThreshold();
+            double? deviation = calculateDeviation();
 
-            if (deviation == null)
-                return 0;
+            switch (deviation)
+            {
+                case null:
+                    return flashlightValue;
+
+                case double.PositiveInfinity:
+                    return 0;
+            }
 
             double deviationScaling = SpecialFunctions.Erf(32 / (Math.Sqrt(2) * (double)deviation));
             flashlightValue *= deviationScaling;
@@ -210,13 +219,29 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return flashlightValue;
         }
 
-        private double? calculateDeviationAtProbabilityThreshold()
+        private double? calculateDeviation()
         {
             if (Attributes.HitCircleCount == 0)
                 return null;
 
-            double probabilityGreat = Beta.InvCDF(1 + countGreat - Attributes.SliderCount, 1 + countMeh + countOk, global_probability_threshold);
-            double deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(probabilityGreat));
+            int greatCountOnCircles = Math.Max(0, countGreat - Attributes.SliderCount - Attributes.SpinnerCount);
+
+            if (greatCountOnCircles == 0)
+                return double.PositiveInfinity;
+
+            double deviation;
+
+            // SS case
+            if (greatCountOnCircles == Attributes.HitCircleCount - countMiss)
+            {
+                deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv((greatCountOnCircles - 0.5) / (Attributes.HitCircleCount - countMiss)));
+            }
+            // Non-SS case
+            else
+            {
+                deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv((double)greatCountOnCircles / (Attributes.HitCircleCount - countMiss)));
+            }
+
             return deviation;
         }
 

@@ -83,16 +83,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// <returns>
         /// The probability of FC'ing the map.
         /// </returns>
-        private double getFcProbability(double skill)
+        private double getExpectedHits(double skill)
         {
-            double fcProbability = 1;
+            double expectedHits = 0;
 
             foreach ((double xDifficulty, double yDifficulty) in difficulties)
             {
-                fcProbability *= hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
+                expectedHits += hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
             }
 
-            return fcProbability;
+            return expectedHits;
         }
 
         protected override void Process(DifficultyHitObject current)
@@ -106,17 +106,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             const double guess_lower_bound = 0.0;
             const double guess_upper_bound = 2.0;
 
-            double fcProbabilityMinusThreshold(double skill)
+            double expectedHitsMinusThreshold(double skill)
             {
-                const double threshold = 0.01;
-                double fcProbability = getFcProbability(skill);
-                return fcProbability - threshold;
+                const double threshold = 0.5;
+                double expectedHits = getExpectedHits(skill);
+                return difficulties.Count - expectedHits - threshold;
             }
 
             try
             {
                 // Find the skill level so that the probability of FC'ing is the threshold.
-                double skillLevel = Bisection.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
+                double skillLevel = Bisection.FindRootExpand(expectedHitsMinusThreshold, guess_lower_bound, guess_upper_bound);
                 return skillLevel;
             }
             catch (NonConvergenceException)
