@@ -226,22 +226,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             int greatCountOnCircles = Math.Max(0, countGreat - Attributes.SliderCount - Attributes.SpinnerCount);
 
-            if (greatCountOnCircles == 0)
-                return double.PositiveInfinity;
+            if (greatCountOnCircles == 0 || Attributes.HitCircleCount - countMiss == 0)
+                return null;
 
-            double deviation;
-
-            // SS case
-            if (greatCountOnCircles == Attributes.HitCircleCount - countMiss)
-            {
-                deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv((greatCountOnCircles - 0.5) / (Attributes.HitCircleCount - countMiss)));
-            }
-            // Non-SS case
-            else
-            {
-                deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv((double)greatCountOnCircles / (Attributes.HitCircleCount - countMiss)));
-            }
-
+            double greatProbability = Math.Min(greatCountOnCircles, Attributes.HitCircleCount - countMiss - 0.5) / (Attributes.HitCircleCount - countMiss);
+            double deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
             return deviation;
         }
 
