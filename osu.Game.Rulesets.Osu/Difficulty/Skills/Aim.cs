@@ -20,12 +20,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     {
         private readonly double radius;
         private readonly List<(double, double)> difficulties = new List<(double, double)>();
+        private const double miss_count_threshold = 0.5;
 
         public Aim(Mod[] mods, double radius)
             : base(mods)
         {
             this.radius = radius;
         }
+
+        private double strain;
 
         /// <summary>
         /// Calculates the player's standard deviation on an object if their skill level equals 1.
@@ -40,14 +43,28 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private (double, double) difficultyValueOf(DifficultyHitObject current)
         {
             var currentObject = (OsuDifficultyHitObject)current;
+            var previousObject = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
 
             if (currentObject.BaseObject is Spinner)
                 return (0, 0);
 
             double xDifficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / currentObject.DeltaTime;
-            double yDifficulty = 0;
 
-            return (xDifficulty, yDifficulty);
+            if (currentObject.Angle != null && previousObject != null)
+            {
+                double angle = currentObject.Angle.Value;
+                xDifficulty *= 1 + angle / Math.PI;
+            }
+
+            strain += xDifficulty;
+            strain *= 0.75;
+
+            if (currentObject.DeltaTime > 1000)
+            {
+                strain = 0;
+            }
+
+            return (strain, 0);
         }
 
         /// <summary>
@@ -74,26 +91,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return SpecialFunctions.Erf(radius * skill / (Math.Sqrt(2) * difficulty));
         }
 
-        /// <summary>
-        /// Calculates the probability a player will FC the map given a skill level.
-        /// </summary>
-        /// <param name="skill">
-        /// The player's skill level.
-        /// </param>
-        /// <returns>
-        /// The probability of FC'ing the map.
-        /// </returns>
-        private double getExpectedHits(double skill)
+        private double getExpectedMisses(double skill)
         {
-            double expectedHits = 0;
+            double expectedMisses = 0;
 
             foreach ((double xDifficulty, double yDifficulty) in difficulties)
             {
-                expectedHits += hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
+                expectedMisses += 1 - hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
             }
 
-            return expectedHits;
+            return expectedMisses;
         }
+
+        private double expectedMissesMinusThreshold(double skill) => getExpectedMisses(skill) - miss_count_threshold;
 
         protected override void Process(DifficultyHitObject current)
         {
@@ -106,17 +116,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             const double guess_lower_bound = 0.0;
             const double guess_upper_bound = 2.0;
 
-            double expectedHitsMinusThreshold(double skill)
-            {
-                const double threshold = 0.5;
-                double expectedHits = getExpectedHits(skill);
-                return difficulties.Count - expectedHits - threshold;
-            }
-
             try
             {
                 // Find the skill level so that the probability of FC'ing is the threshold.
-                double skillLevel = Bisection.FindRootExpand(expectedHitsMinusThreshold, guess_lower_bound, guess_upper_bound);
+                double skillLevel = Bisection.FindRootExpand(expectedMissesMinusThreshold, guess_lower_bound, guess_upper_bound);
                 return skillLevel;
             }
             catch (NonConvergenceException)
