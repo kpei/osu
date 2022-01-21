@@ -33,7 +33,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
         }
 
-        public override double Calculate(Dictionary<string, double> categoryRatings = null)
+        public override PerformanceAttributes Calculate()
         {
             mods = Score.Mods;
             accuracy = Score.Accuracy;
@@ -44,18 +44,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             countMiss = Score.Statistics.GetValueOrDefault(HitResult.Miss);
             effectiveMissCount = calculateEffectiveMissCount();
 
-            double multiplier = 1;
-
-            // Custom multipliers for NoFail and SpunOut.
-            if (mods.Any(m => m is OsuModNoFail))
-                multiplier *= Math.Max(0.90, 1.0 - 0.02 * effectiveMissCount);
-
-            if (mods.Any(m => m is OsuModSpunOut))
-                multiplier *= 1.0 - Math.Pow((double)Attributes.SpinnerCount / totalHits, 0.85);
+            double multiplier = 1.0; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
             if (mods.Any(h => h is OsuModRelax))
             {
-                effectiveMissCount += countOk + countMeh;
+                // As we're adding Oks and Mehs to an approximated number of combo breaks the result can be higher than total hits in specific scenarios (which breaks some calculations) so we need to clamp it.
+                effectiveMissCount = Math.Min(effectiveMissCount + countOk + countMeh, totalHits);
+
                 multiplier *= 0.6;
             }
 
@@ -65,23 +60,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double flashlightValue = computeFlashlightValue();
             double totalValue = multiplier * (aimValue + speedValue + accuracyValue + flashlightValue);
 
-            if (categoryRatings != null)
+            return new OsuPerformanceAttributes
             {
-                categoryRatings.Add("Aim", aimValue);
-                categoryRatings.Add("Speed", speedValue);
-                categoryRatings.Add("Accuracy", accuracyValue);
-                categoryRatings.Add("Flashlight", flashlightValue);
-                categoryRatings.Add("OD", Attributes.OverallDifficulty);
-                categoryRatings.Add("AR", Attributes.ApproachRate);
-                categoryRatings.Add("Max Combo", Attributes.MaxCombo);
-            }
-
-            return totalValue;
+                Aim = aimValue,
+                Speed = speedValue,
+                Accuracy = accuracyValue,
+                Flashlight = flashlightValue,
+                EffectiveMissCount = effectiveMissCount,
+                Total = totalValue
+            };
         }
 
         private double computeAimValue()
         {
-            double aimDifficulty = Attributes.AimStrain;
+            double aimDifficulty = Attributes.AimDifficulty;
 
             if (mods.Any(m => m is OsuModTouchDevice))
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
@@ -127,7 +119,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double computeSpeedValue()
         {
-            double speedValue = Math.Pow(Attributes.SpeedStrain, 3);
+            double speedValue = Math.Pow(Attributes.SpeedDifficulty, 3);
             double? deviation = calculateDeviation();
 
             switch (deviation)
@@ -178,7 +170,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (!mods.Any(h => h is OsuModFlashlight))
                 return 0.0;
 
-            double rawFlashlight = Attributes.FlashlightRating;
+            double rawFlashlight = Attributes.FlashlightDifficulty;
 
             if (mods.Any(m => m is OsuModTouchDevice))
                 rawFlashlight = Math.Pow(rawFlashlight, 0.8);
