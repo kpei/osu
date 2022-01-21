@@ -2,62 +2,106 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Diagnostics.CodeAnalysis;
-using Newtonsoft.Json;
-using osu.Framework.Extensions.ObjectExtensions;
+using JetBrains.Annotations;
 using osu.Framework.Testing;
+using Realms;
+
+#nullable enable
 
 namespace osu.Game.Rulesets
 {
     [ExcludeFromDynamicCompile]
-    public class RulesetInfo : IEquatable<RulesetInfo>, IRulesetInfo
+    [MapTo("Ruleset")]
+    public class RulesetInfo : RealmObject, IEquatable<RulesetInfo>, IRulesetInfo
     {
-        public int? ID { get; set; }
+        [PrimaryKey]
+        public string ShortName { get; set; } = string.Empty;
 
-        public string Name { get; set; }
+        [Indexed]
+        public int OnlineID { get; set; } = -1;
 
-        public string ShortName { get; set; }
+        public string Name { get; set; } = string.Empty;
 
-        public string InstantiationInfo { get; set; }
+        public string InstantiationInfo { get; set; } = string.Empty;
 
-        [JsonIgnore]
+        public RulesetInfo(string shortName, string name, string instantiationInfo, int onlineID)
+        {
+            ShortName = shortName;
+            Name = name;
+            InstantiationInfo = instantiationInfo;
+            OnlineID = onlineID;
+        }
+
+        [UsedImplicitly]
+        public RulesetInfo()
+        {
+        }
+
+        public RulesetInfo(int? onlineID, string name, string shortName, bool available)
+        {
+            OnlineID = onlineID ?? -1;
+            Name = name;
+            ShortName = shortName;
+            Available = available;
+        }
+
         public bool Available { get; set; }
 
-        // TODO: this should probably be moved to RulesetStore.
-        public virtual Ruleset CreateInstance()
+        public bool Equals(RulesetInfo? other)
         {
-            if (!Available) return null;
+            if (ReferenceEquals(this, other)) return true;
+            if (other == null) return false;
 
-            var ruleset = (Ruleset)Activator.CreateInstance(Type.GetType(InstantiationInfo).AsNonNull());
+            return ShortName == other.ShortName;
+        }
+
+        public bool Equals(IRulesetInfo? other) => other is RulesetInfo b && Equals(b);
+
+        public override int GetHashCode()
+        {
+            // Importantly, ignore the underlying realm hash code, as it will usually not match.
+            var hashCode = new HashCode();
+            // ReSharper disable once NonReadonlyMemberInGetHashCode
+            hashCode.Add(ShortName);
+            return hashCode.ToHashCode();
+        }
+
+        public override string ToString() => Name;
+
+        public RulesetInfo Clone() => new RulesetInfo
+        {
+            OnlineID = OnlineID,
+            Name = Name,
+            ShortName = ShortName,
+            InstantiationInfo = InstantiationInfo,
+            Available = Available
+        };
+
+        public Ruleset CreateInstance()
+        {
+            if (!Available)
+                throw new RulesetLoadException(@"Ruleset not available");
+
+            var type = Type.GetType(InstantiationInfo);
+
+            if (type == null)
+                throw new RulesetLoadException(@"Type lookup failure");
+
+            var ruleset = Activator.CreateInstance(type) as Ruleset;
+
+            if (ruleset == null)
+                throw new RulesetLoadException(@"Instantiation failure");
 
             // overwrite the pre-populated RulesetInfo with a potentially database attached copy.
-            ruleset.RulesetInfo = this;
+            // TODO: figure if we still want/need this after switching to realm.
+            // ruleset.RulesetInfo = this;
 
             return ruleset;
         }
 
-        public bool Equals(RulesetInfo other) => other != null && ID == other.ID && Available == other.Available && Name == other.Name && InstantiationInfo == other.InstantiationInfo;
+        #region Compatibility properties
 
-        public override bool Equals(object obj) => obj is RulesetInfo rulesetInfo && Equals(rulesetInfo);
-
-        [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = ID.HasValue ? ID.GetHashCode() : 0;
-                hashCode = (hashCode * 397) ^ (InstantiationInfo != null ? InstantiationInfo.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Name != null ? Name.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ Available.GetHashCode();
-                return hashCode;
-            }
-        }
-
-        public override string ToString() => Name ?? $"{Name} ({ShortName}) ID: {ID}";
-
-        #region Implementation of IHasOnlineID
-
-        public int OnlineID => ID ?? -1;
+        public int ID => OnlineID;
 
         #endregion
     }

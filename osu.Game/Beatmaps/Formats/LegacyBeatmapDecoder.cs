@@ -201,7 +201,11 @@ namespace osu.Game.Beatmaps.Formats
             switch (pair.Key)
             {
                 case @"Bookmarks":
-                    beatmap.BeatmapInfo.StoredBookmarks = pair.Value;
+                    beatmap.BeatmapInfo.Bookmarks = pair.Value.Split(',').Select(v =>
+                    {
+                        bool result = int.TryParse(v, out int val);
+                        return new { result, val };
+                    }).Where(p => p.result).Select(p => p.val).ToArray();
                     break;
 
                 case @"DistanceSpacing":
@@ -247,7 +251,7 @@ namespace osu.Game.Beatmaps.Formats
                     break;
 
                 case @"Creator":
-                    metadata.AuthorString = pair.Value;
+                    metadata.Author.Username = pair.Value;
                     break;
 
                 case @"Version":
