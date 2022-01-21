@@ -18,20 +18,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Aim : Skill
     {
-        private readonly double radius;
         private readonly List<(double, double)> difficulties = new List<(double, double)>();
         private const double miss_count_threshold = 0.5;
 
-        public Aim(Mod[] mods, double radius)
+        public Aim(Mod[] mods)
             : base(mods)
         {
-            this.radius = radius;
         }
 
         private double strain;
 
         /// <summary>
-        /// Calculates the player's standard deviation on an object if their skill level equals 1.
+        /// Calculates the player's standard deviation on an object if their skill level equals 1,
+        /// with distances normalized with respect to the radius (1 distance = 1 radii).
         /// The higher the standard deviation, the more difficult the object is to hit.
         /// </summary>
         /// <param name="current">
@@ -42,24 +41,29 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// </returns>
         private (double, double) difficultyValueOf(DifficultyHitObject current)
         {
-            var currentObject = (OsuDifficultyHitObject)current;
-            var previousObject = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
+            var osuCurrObj = (OsuDifficultyHitObject)current;
+            var osuLastObj = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
 
-            if (currentObject.BaseObject is Spinner)
+            if (osuCurrObj.BaseObject is Spinner)
                 return (0, 0);
 
-            double xDifficulty = (currentObject.JumpDistance + currentObject.TravelDistance) / currentObject.DeltaTime;
-
-            if (currentObject.Angle != null && previousObject != null)
+            if (osuLastObj != null)
             {
-                double angle = currentObject.Angle.Value;
-                xDifficulty *= 1 + angle / Math.PI;
+                double currVelocity = (osuCurrObj.LazyJumpDistance + osuLastObj.TravelDistance) / osuCurrObj.StrainTime;
+                double xDifficulty = currVelocity;
+
+                if (osuCurrObj.Angle != null)
+                {
+                    double angle = osuCurrObj.Angle.Value;
+                    xDifficulty *= 1 + angle / Math.PI;
+                }
+
+                strain += xDifficulty;
             }
 
-            strain += xDifficulty;
             strain *= 0.75;
 
-            if (currentObject.DeltaTime > 1000)
+            if (osuCurrObj.StrainTime > 1000)
             {
                 strain = 0;
             }
@@ -88,9 +92,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (skill == 0)
                 return 0;
 
-            return SpecialFunctions.Erf(radius * skill / (Math.Sqrt(2) * difficulty));
+            return SpecialFunctions.Erf(skill / (Math.Sqrt(2) * difficulty));
         }
 
+        /// <summary>
+        /// Calculates the expected amount of misses on this map given a skill level.
+        /// </summary>
+        /// <param name="skill">
+        /// The player's skill level.
+        /// </param>
+        /// <returns>
+        /// The number of misses the player is expected to get.
+        /// </returns>
         private double getExpectedMisses(double skill)
         {
             double expectedMisses = 0;
@@ -113,18 +126,18 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public override double DifficultyValue()
         {
-            const double guess_lower_bound = 0.0;
+            const double guess_lower_bound = 1e-9;
             const double guess_upper_bound = 2.0;
 
             try
             {
                 // Find the skill level so that the probability of FC'ing is the threshold.
-                double skillLevel = Bisection.FindRootExpand(expectedMissesMinusThreshold, guess_lower_bound, guess_upper_bound);
+                double skillLevel = Brent.FindRootExpand(expectedMissesMinusThreshold, guess_lower_bound, guess_upper_bound);
                 return skillLevel;
             }
             catch (NonConvergenceException)
             {
-                return double.PositiveInfinity;
+                return 0;
             }
         }
     }
