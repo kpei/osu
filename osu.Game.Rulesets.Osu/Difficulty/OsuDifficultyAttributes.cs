@@ -21,9 +21,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("flashlight_difficulty")]
         public double FlashlightDifficulty { get; set; }
 
-        [JsonProperty("slider_factor")]
-        public double SliderFactor { get; set; }
-
         [JsonProperty("approach_rate")]
         public double ApproachRate { get; set; }
 
@@ -52,8 +49,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             if (ShouldSerializeFlashlightRating())
                 yield return (ATTRIB_ID_FLASHLIGHT, FlashlightDifficulty);
-
-            yield return (ATTRIB_ID_SLIDER_FACTOR, SliderFactor);
         }
 
         public override void FromDatabaseAttributes(IReadOnlyDictionary<int, double> values)
@@ -67,7 +62,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             MaxCombo = (int)values[ATTRIB_ID_MAX_COMBO];
             StarRating = values[ATTRIB_ID_DIFFICULTY];
             FlashlightDifficulty = values.GetValueOrDefault(ATTRIB_ID_FLASHLIGHT);
-            SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
         }
 
         #region Newtonsoft.Json implicit ShouldSerialize() methods
