@@ -26,7 +26,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private const double tap_exp = 0.5;
 
         private double hitWindowGreat;
-        private double radius;
 
         public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
@@ -95,11 +94,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             hitWindows.SetDifficulty(beatmap.Difficulty.OverallDifficulty);
 
             hitWindowGreat = hitWindows.WindowFor(HitResult.Great) / clockRate;
-            radius = 54.4 - 4.48 * beatmap.Difficulty.CircleSize;
 
             return new Skill[]
             {
-                new Aim(mods, radius),
+                new Aim(mods),
                 new Speed(mods, hitWindowGreat),
                 new Flashlight(mods)
             };
