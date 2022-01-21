@@ -16,7 +16,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Speed : StrainSkill
     {
-        private const double single_spacing_threshold = 125;
         private const double rhythm_multiplier = 0.75;
         private const int history_time_max = 5000; // 5 seconds of calculatingRhythmBonus max.
         private const double min_speed_bonus = 75; // ~200BPM
@@ -68,10 +67,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
                 currHistoricalDecay = Math.Min((double)(Previous.Count - i) / Previous.Count, currHistoricalDecay); // either we're limited by time or limited by object count.
 
-                double currDelta = currObj.DeltaTime;
-                double prevDelta = prevObj.DeltaTime;
-                double lastDelta = lastObj.DeltaTime;
-                double currRatio = 1.0 + 6.0 * Math.Min(0.5, Math.Pow(Math.Sin(Math.PI / (Math.Min(prevDelta, currDelta) / Math.Max(prevDelta, currDelta))), 2)); // fancy function to calculate rhythmbonuses.
+                double currDelta = currObj.StrainTime;
+                double prevDelta = prevObj.StrainTime;
+                double lastDelta = lastObj.StrainTime;
+                double currRatio = 1.0 + 6.0 * Math.Min(0.5,
+                    Math.Pow(Math.Sin(Math.PI / (Math.Min(prevDelta, currDelta) / Math.Max(prevDelta, currDelta))), 2)); // fancy function to calculate rhythm bonuses.
 
                 double windowPenalty = Math.Min(1, Math.Max(0, Math.Abs(prevDelta - currDelta) - greatWindow * 0.6) / (greatWindow * 0.6));
 
@@ -88,7 +88,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                     }
                     else
                     {
-                        if (Previous[i - 1].BaseObject is Slider) // bpm change is into slider, this is easy acc window
+                        if (Previous[i - 1].BaseObject is Slider) // bpm change is into slider, this is easy to acc
                             effectiveRatio *= 0.125;
 
                         if (Previous[i].BaseObject is Slider) // bpm change was from a slider, this is easier typically than circle -> circle
@@ -97,10 +97,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                         if (previousIslandSize == islandSize) // repeated island size (ex: triplet -> triplet)
                             effectiveRatio *= 0.25;
 
-                        if (previousIslandSize % 2 == islandSize % 2) // repeated island polartiy (2 -> 4, 3 -> 5)
+                        if (previousIslandSize % 2 == islandSize % 2) // repeated island polarity (2 -> 4, 3 -> 5)
                             effectiveRatio *= 0.50;
 
-                        if (lastDelta > prevDelta + 10 && prevDelta > currDelta + 10) // previous increase happened a note ago, 1/1->1/2-1/4, dont want to buff this.
+                        if (lastDelta > prevDelta + 10 && prevDelta > currDelta + 10) // previous increase happened a note ago, 1/1 -> 1/2 -> 1/4, don't want to buff this.
                             effectiveRatio *= 0.125;
 
                         rhythmComplexitySum += Math.Sqrt(effectiveRatio * startRatio) * currHistoricalDecay * Math.Sqrt(4 + islandSize) / 2 * Math.Sqrt(4 + previousIslandSize) / 2;
@@ -110,7 +110,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                         previousIslandSize = islandSize; // log the last island size.
 
                         if (prevDelta * 1.25 < currDelta) // we're slowing down, stop counting
-                            firstDeltaSwitch = false; // if we're speeding up, this stays true and  we keep counting island size.
+                            firstDeltaSwitch = false; // if we're speeding up, this stays true and we keep counting island size.
 
                         islandSize = 1;
                     }
@@ -124,7 +124,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 }
             }
 
-            return Math.Sqrt(4 + rhythmComplexitySum * rhythm_multiplier) / 2; //produces multiplier that can be applied to strain. range [1, infinity) (not really though)
+            return Math.Sqrt(4 + rhythmComplexitySum * rhythm_multiplier) / 2; // produces multiplier that can be applied to strain. range [1, infinity) (not really though)
         }
 
         private double strainValueOf(DifficultyHitObject current)
@@ -136,17 +136,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuPrevObj = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
 
-            double strainTime = osuCurrObj.DeltaTime;
+            double strainTime = osuCurrObj.StrainTime;
             double greatWindowFull = greatWindow * 2;
             double speedWindowRatio = strainTime / greatWindowFull;
 
-            // Aim to nerf cheesy rhythms (Very fast consecutive doubles with large deltatimes between)
-            if (osuPrevObj != null && strainTime < greatWindowFull && osuPrevObj.DeltaTime > strainTime)
-                strainTime = Interpolation.Lerp(osuPrevObj.DeltaTime, strainTime, speedWindowRatio);
+            // Aim to nerf cheesy rhythms (Very fast consecutive doubles with large StrainTimes between)
+            if (osuPrevObj != null && strainTime < greatWindowFull && osuPrevObj.StrainTime > strainTime)
+                strainTime = Interpolation.Lerp(osuPrevObj.StrainTime, strainTime, speedWindowRatio);
 
-            // Cap deltatime to the OD 300 hitwindow.
+            // Cap StrainTime to the OD 300 hitwindow.
             // 0.93 is derived from making sure 260bpm OD8 streams aren't nerfed harshly, whilst 0.92 limits the effect of the cap.
-            strainTime /= Math.Clamp((strainTime / greatWindowFull) / 0.93, 0.92, 1);
+            strainTime /= Math.Clamp(strainTime / greatWindowFull / 0.93, 0.92, 1);
 
             // derive speedBonus for calculation
             double speedBonus = 1.0;
@@ -159,7 +159,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         private double strainDecay(double ms) => Math.Pow(strainDecayBase, ms / 1000);
 
-        protected override double CalculateInitialStrain(double time) => (currentStrain * currentRhythm) * strainDecay(time - Previous[0].StartTime);
+        protected override double CalculateInitialStrain(double time) => currentStrain * currentRhythm * strainDecay(time - Previous[0].StartTime);
 
         protected override double StrainValueAt(DifficultyHitObject current)
         {
