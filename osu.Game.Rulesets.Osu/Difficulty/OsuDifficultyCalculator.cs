@@ -22,7 +22,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
     {
         private const double aim_scaling = 10.25;
         private const double aim_exp = 0.829842642;
-        private const double tap_scaling = 5.1;
+        private const double tap_scaling = 0.1275;
         private const double tap_exp = 0.5;
 
         private double hitWindowGreat;
@@ -101,7 +101,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return new Skill[]
             {
                 new Aim(mods, radius),
-                new Speed(mods),
+                new Speed(mods, hitWindowGreat),
                 new Flashlight(mods)
             };
         }
