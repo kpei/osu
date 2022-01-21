@@ -119,7 +119,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                     return 0;
             }
 
-            double deviationScaling = SpecialFunctions.Erf(32 / (Math.Sqrt(2) * (double)deviation));
+            double deviationScaling = SpecialFunctions.Erf(50 / (Math.Sqrt(2) * (double)deviation));
             aimValue *= deviationScaling;
 
             return aimValue;
@@ -139,7 +139,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                     return 0;
             }
 
-            double deviationScaling = SpecialFunctions.Erf(32 / (Math.Sqrt(2) * (double)deviation));
+            double deviationScaling = SpecialFunctions.Erf(20 / (Math.Sqrt(2) * (double)deviation));
             speedValue *= deviationScaling;
 
             if (mods.Any(h => h is OsuModHidden))
