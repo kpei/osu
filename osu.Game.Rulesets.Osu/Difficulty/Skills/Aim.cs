@@ -4,6 +4,7 @@
 using MathNet.Numerics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MathNet.Numerics.RootFinding;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
@@ -126,6 +127,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         public override double DifficultyValue()
         {
+            if (difficulties.Sum(i => i.Item1) == 0)
+                return 0;
+
             const double guess_lower_bound = 1e-9;
             const double guess_upper_bound = 2.0;
 
