@@ -60,7 +60,7 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 Assert.AreEqual(0, beatmapInfo.AudioLeadIn);
                 Assert.AreEqual(164471, metadata.PreviewTime);
                 Assert.AreEqual(0.7f, beatmapInfo.StackLeniency);
-                Assert.IsTrue(beatmapInfo.RulesetID == 0);
+                Assert.IsTrue(beatmapInfo.Ruleset.OnlineID == 0);
                 Assert.IsFalse(beatmapInfo.LetterboxInBreaks);
                 Assert.IsFalse(beatmapInfo.SpecialStyle);
                 Assert.IsFalse(beatmapInfo.WidescreenStoryboard);
@@ -178,17 +178,17 @@ namespace osu.Game.Tests.Beatmaps.Formats
                 var timingPoint = controlPoints.TimingPointAt(0);
                 Assert.AreEqual(956, timingPoint.Time);
                 Assert.AreEqual(329.67032967033, timingPoint.BeatLength);
-                Assert.AreEqual(TimeSignatures.SimpleQuadruple, timingPoint.TimeSignature);
+                Assert.AreEqual(TimeSignature.SimpleQuadruple, timingPoint.TimeSignature);
 
                 timingPoint = controlPoints.TimingPointAt(48428);
                 Assert.AreEqual(956, timingPoint.Time);
                 Assert.AreEqual(329.67032967033d, timingPoint.BeatLength);
-                Assert.AreEqual(TimeSignatures.SimpleQuadruple, timingPoint.TimeSignature);
+                Assert.AreEqual(TimeSignature.SimpleQuadruple, timingPoint.TimeSignature);
 
                 timingPoint = controlPoints.TimingPointAt(119637);
                 Assert.AreEqual(119637, timingPoint.Time);
                 Assert.AreEqual(659.340659340659, timingPoint.BeatLength);
-                Assert.AreEqual(TimeSignatures.SimpleQuadruple, timingPoint.TimeSignature);
+                Assert.AreEqual(TimeSignature.SimpleQuadruple, timingPoint.TimeSignature);
 
                 var difficultyPoint = controlPoints.DifficultyPointAt(0);
                 Assert.AreEqual(0, difficultyPoint.Time);

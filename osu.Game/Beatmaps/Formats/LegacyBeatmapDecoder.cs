@@ -141,9 +141,11 @@ namespace osu.Game.Beatmaps.Formats
                     break;
 
                 case @"Mode":
-                    beatmap.BeatmapInfo.RulesetID = Parsing.ParseInt(pair.Value);
+                    int rulesetID = Parsing.ParseInt(pair.Value);
 
-                    switch (beatmap.BeatmapInfo.RulesetID)
+                    beatmap.BeatmapInfo.RulesetID = rulesetID;
+
+                    switch (rulesetID)
                     {
                         case 0:
                             parser = new Rulesets.Objects.Legacy.Osu.ConvertHitObjectParser(getOffsetTime(), FormatVersion);
@@ -340,9 +342,9 @@ namespace osu.Game.Beatmaps.Formats
             double beatLength = Parsing.ParseDouble(split[1].Trim());
             double speedMultiplier = beatLength < 0 ? 100.0 / -beatLength : 1;
 
-            TimeSignatures timeSignature = TimeSignatures.SimpleQuadruple;
+            TimeSignature timeSignature = TimeSignature.SimpleQuadruple;
             if (split.Length >= 3)
-                timeSignature = split[2][0] == '0' ? TimeSignatures.SimpleQuadruple : (TimeSignatures)Parsing.ParseInt(split[2]);
+                timeSignature = split[2][0] == '0' ? TimeSignature.SimpleQuadruple : new TimeSignature(Parsing.ParseInt(split[2]));
 
             LegacySampleBank sampleSet = defaultSampleBank;
             if (split.Length >= 4)
@@ -397,7 +399,7 @@ namespace osu.Game.Beatmaps.Formats
                 OmitFirstBarLine = omitFirstBarSignature,
             };
 
-            bool isOsuRuleset = beatmap.BeatmapInfo.RulesetID == 0;
+            bool isOsuRuleset = beatmap.BeatmapInfo.Ruleset.OnlineID == 0;
             // scrolling rulesets use effect points rather than difficulty points for scroll speed adjustments.
             if (!isOsuRuleset)
                 effectPoint.ScrollSpeed = speedMultiplier;
