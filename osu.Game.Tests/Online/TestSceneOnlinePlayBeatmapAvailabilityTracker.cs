@@ -47,7 +47,7 @@ namespace osu.Game.Tests.Online
         {
             Dependencies.Cache(rulesets = new RulesetStore(Realm));
             Dependencies.CacheAs<BeatmapManager>(beatmaps = new TestBeatmapManager(LocalStorage, Realm, rulesets, API, audio, Resources, host, Beatmap.Default));
-            Dependencies.CacheAs<BeatmapModelDownloader>(beatmapDownloader = new TestBeatmapModelDownloader(beatmaps, API, host));
+            Dependencies.CacheAs<BeatmapModelDownloader>(beatmapDownloader = new TestBeatmapModelDownloader(beatmaps, API));
         }
 
         [SetUp]
@@ -92,7 +92,8 @@ namespace osu.Game.Tests.Online
 
             AddStep("allow importing", () => beatmaps.AllowImport.SetResult(true));
             AddUntilStep("wait for import", () => beatmaps.CurrentImport != null);
-            addAvailabilityCheckStep("state locally available", BeatmapAvailability.LocallyAvailable);
+            AddAssert("ensure beatmap available", () => beatmaps.IsAvailableLocally(testBeatmapSet));
+            addAvailabilityCheckStep("state is locally available", BeatmapAvailability.LocallyAvailable);
         }
 
         [Test]
@@ -173,14 +174,14 @@ namespace osu.Game.Tests.Online
 
             protected override BeatmapModelManager CreateBeatmapModelManager(Storage storage, RealmAccess realm, RulesetStore rulesets, BeatmapOnlineLookupQueue onlineLookupQueue)
             {
-                return new TestBeatmapModelManager(this, storage, realm, rulesets, onlineLookupQueue);
+                return new TestBeatmapModelManager(this, storage, realm, onlineLookupQueue);
             }
 
             internal class TestBeatmapModelManager : BeatmapModelManager
             {
                 private readonly TestBeatmapManager testBeatmapManager;
 
-                public TestBeatmapModelManager(TestBeatmapManager testBeatmapManager, Storage storage, RealmAccess databaseAccess, RulesetStore rulesetStore, BeatmapOnlineLookupQueue beatmapOnlineLookupQueue)
+                public TestBeatmapModelManager(TestBeatmapManager testBeatmapManager, Storage storage, RealmAccess databaseAccess, BeatmapOnlineLookupQueue beatmapOnlineLookupQueue)
                     : base(databaseAccess, storage, beatmapOnlineLookupQueue)
                 {
                     this.testBeatmapManager = testBeatmapManager;
@@ -196,7 +197,7 @@ namespace osu.Game.Tests.Online
 
         internal class TestBeatmapModelDownloader : BeatmapModelDownloader
         {
-            public TestBeatmapModelDownloader(IModelImporter<BeatmapSetInfo> importer, IAPIProvider apiProvider, GameHost gameHost)
+            public TestBeatmapModelDownloader(IModelImporter<BeatmapSetInfo> importer, IAPIProvider apiProvider)
                 : base(importer, apiProvider)
             {
             }

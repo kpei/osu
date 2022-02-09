@@ -2,13 +2,13 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
-using System.Diagnostics;
 using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
@@ -68,7 +68,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             Container leaderboardContainer;
             Container scoreDisplayContainer;
 
-            masterClockContainer = new MasterGameplayClockContainer(Beatmap.Value, 0);
+            masterClockContainer = CreateMasterGameplayClockContainer(Beatmap.Value);
 
             InternalChildren = new[]
             {
@@ -227,7 +227,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         public override bool OnBackButton()
         {
-            Debug.Assert(multiplayerClient.Room != null);
+            if (multiplayerClient.Room == null)
+                return base.OnBackButton();
 
             // On a manual exit, set the player back to idle unless gameplay has finished.
             if (multiplayerClient.Room.State != MultiplayerRoomState.Open)
@@ -235,5 +236,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             return base.OnBackButton();
         }
+
+        protected virtual MasterGameplayClockContainer CreateMasterGameplayClockContainer(WorkingBeatmap beatmap) => new MasterGameplayClockContainer(beatmap, 0);
     }
 }
