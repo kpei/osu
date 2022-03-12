@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics;
+using MathNet.Numerics.Distributions;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Mods;
@@ -27,6 +28,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
+        private const double fc_probability_threshold = 1 / 1.5;
 
         public OsuPerformanceCalculator(Ruleset ruleset, DifficultyAttributes attributes, ScoreInfo score)
             : base(ruleset, attributes, score)
@@ -44,15 +46,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             countMiss = Score.Statistics.GetValueOrDefault(HitResult.Miss);
             effectiveMissCount = calculateEffectiveMissCount();
 
-            double multiplier = 1.0; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
-
-            if (mods.Any(h => h is OsuModRelax))
-            {
-                // As we're adding Oks and Mehs to an approximated number of combo breaks the result can be higher than total hits in specific scenarios (which breaks some calculations) so we need to clamp it.
-                effectiveMissCount = Math.Min(effectiveMissCount + countOk + countMeh, totalHits);
-
-                multiplier *= 0.6;
-            }
+            const double multiplier = 1.0; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
             double aimValue = computeAimValue();
             double speedValue = computeSpeedValue();
@@ -81,7 +75,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
             if (effectiveMissCount > 0)
             {
-                double missPenalty = SpecialFunctions.ErfInv((totalHits - effectiveMissCount) / totalHits) / SpecialFunctions.ErfInv((totalHits - 0.5) / totalHits);
+                double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
+                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + countMiss, fc_probability_threshold);
+                double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
                 aimDifficulty *= missPenalty;
             }
 
@@ -221,8 +217,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (greatCountOnCircles == 0 || Attributes.HitCircleCount - countMiss == 0)
                 return null;
 
-            double greatProbability = Math.Min(greatCountOnCircles, Attributes.HitCircleCount - countMiss - 0.5) / (Attributes.HitCircleCount - countMiss);
-            double deviation = (80 - 6 * Attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
+            double greatHitWindow = 80 - 6 * Attributes.OverallDifficulty;
+            double greatProbability = Beta.InvCDF(greatCountOnCircles, 1 + countOk + countMeh, 1 / 1.5);
+            double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
+
             return deviation;
         }
 
