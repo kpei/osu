@@ -218,7 +218,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return null;
 
             double greatHitWindow = 80 - 6 * Attributes.OverallDifficulty;
-            double greatProbability = Beta.InvCDF(greatCountOnCircles, 1 + countOk + countMeh, 1 / 1.5);
+            double greatProbability = Beta.InvCDF(greatCountOnCircles, 1 + countOk + countMeh, fc_probability_threshold);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;
