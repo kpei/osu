@@ -27,8 +27,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
         }
 
-        private double strain;
-
         /// <summary>
         /// Calculates the player's standard deviation on an object if their skill level equals 1,
         /// with distances normalized with respect to the radius (1 distance = 1 radii).
@@ -43,33 +41,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         private (double, double) difficultyValueOf(DifficultyHitObject current)
         {
             var osuCurrObj = (OsuDifficultyHitObject)current;
-            var osuLastObj = Previous.Count > 0 ? (OsuDifficultyHitObject)Previous[0] : null;
-
             if (osuCurrObj.BaseObject is Spinner)
                 return (0, 0);
 
-            if (osuLastObj != null)
-            {
-                double currVelocity = (osuCurrObj.LazyJumpDistance + osuLastObj.TravelDistance) / osuCurrObj.StrainTime;
-                double xDifficulty = currVelocity;
+            // Aim deviation is proportional to velocity
+            double difficulty = osuCurrObj.LazyJumpDistance / osuCurrObj.StrainTime;
 
-                if (osuCurrObj.Angle != null)
-                {
-                    double angle = osuCurrObj.Angle.Value;
-                    xDifficulty *= 1 + angle / Math.PI;
-                }
-
-                strain += xDifficulty;
-            }
-
-            strain *= 0.75;
-
-            if (osuCurrObj.StrainTime > 1000)
-            {
-                strain = 0;
-            }
-
-            return (strain, 0);
+            return (difficulty, 0);
         }
 
         /// <summary>
