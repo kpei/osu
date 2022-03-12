@@ -20,7 +20,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Aim : Skill
     {
         private readonly List<(double, double)> difficulties = new List<(double, double)>();
-        private const double miss_count_threshold = 0.5;
+        private const double fc_probability_threshold = 1 / 1.5;
 
         public Aim(Mod[] mods)
             : base(mods)
@@ -75,7 +75,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the expected amount of misses on this map given a skill level.
+        /// Calculates the probability of obtaining an FC on a map given a skill level
         /// </summary>
         /// <param name="skill">
         /// The player's skill level.
@@ -83,19 +83,19 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// <returns>
         /// The number of misses the player is expected to get.
         /// </returns>
-        private double getExpectedMisses(double skill)
+        private double getFcProbability(double skill)
         {
-            double expectedMisses = 0;
+            double fcProbability = 1;
 
             foreach ((double xDifficulty, double yDifficulty) in difficulties)
             {
-                expectedMisses += 1 - hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
+                fcProbability *= hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
             }
 
-            return expectedMisses;
+            return fcProbability;
         }
 
-        private double expectedMissesMinusThreshold(double skill) => getExpectedMisses(skill) - miss_count_threshold;
+        private double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill) - fc_probability_threshold;
 
         protected override void Process(DifficultyHitObject current)
         {
@@ -108,13 +108,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (difficulties.Sum(i => i.Item1) == 0)
                 return 0;
 
-            const double guess_lower_bound = 1e-9;
-            const double guess_upper_bound = 2.0;
+            const double guess_lower_bound = 0;
+            const double guess_upper_bound = 2;
 
             try
             {
                 // Find the skill level so that the probability of FC'ing is the threshold.
-                double skillLevel = Brent.FindRootExpand(expectedMissesMinusThreshold, guess_lower_bound, guess_upper_bound);
+                double skillLevel = Brent.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
                 return skillLevel;
             }
             catch (NonConvergenceException)
