@@ -28,8 +28,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the player's standard deviation on an object if their skill level equals 1,
-        /// with distances normalized with respect to the radius (1 distance = 1 radii).
+        /// Calculates the player's standard deviation on an object if their skill level equals 1, a measure defined as "difficulty".
+        /// Distances are normalized with respect to the radius: 1 distance = 1 radii.
         /// The higher the standard deviation, the more difficult the object is to hit.
         /// </summary>
         /// <param name="current">
@@ -44,7 +44,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (osuCurrObj.BaseObject is Spinner)
                 return (0, 0);
 
-            // Aim deviation is proportional to velocity
+            // Aim deviation is proportional to velocity.
             double difficulty = osuCurrObj.LazyJumpDistance / osuCurrObj.StrainTime;
 
             return (difficulty, 0);
@@ -75,13 +75,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the probability of obtaining an FC on a map given a skill level
+        /// Calculates the probability of FC'ing a map given a skill level.
         /// </summary>
         /// <param name="skill">
         /// The player's skill level.
         /// </param>
         /// <returns>
-        /// The number of misses the player is expected to get.
+        /// The probability of FC'ing a map.
         /// </returns>
         private double getFcProbability(double skill)
         {
@@ -95,7 +95,32 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             return fcProbability;
         }
 
-        private double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill) - fc_probability_threshold;
+        /// <summary>
+        /// We want to find the skill level such that the probability of FC'ing a map is equal to <see cref="fc_probability_threshold"/>.
+        /// Create a function that calculates the probability of FC'ing given a skill level and subtracts <see cref="fc_probability_threshold"/>.
+        /// The root of this function is the skill level where the probability of FC'ing the map is <see cref="fc_probability_threshold"/>.
+        /// This skill level is defined as the difficulty of the map.
+        /// </summary>
+        /// <returns>
+        /// The skill level such that the probability of FC'ing the map is <see cref="fc_probability_threshold"/>.
+        /// </returns>
+        private double getSkillLevel()
+        {
+            double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill) - fc_probability_threshold;
+
+            const double guess_lower_bound = 0;
+            const double guess_upper_bound = 2;
+
+            try
+            {
+                double skillLevel = Brent.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
+                return skillLevel;
+            }
+            catch (NonConvergenceException)
+            {
+                return 0;
+            }
+        }
 
         protected override void Process(DifficultyHitObject current)
         {
@@ -108,19 +133,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             if (difficulties.Sum(i => i.Item1) == 0)
                 return 0;
 
-            const double guess_lower_bound = 0;
-            const double guess_upper_bound = 2;
-
-            try
-            {
-                // Find the skill level so that the probability of FC'ing is the threshold.
-                double skillLevel = Brent.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
-                return skillLevel;
-            }
-            catch (NonConvergenceException)
-            {
-                return 0;
-            }
+            double skillLevel = getSkillLevel();
+            return skillLevel;
         }
     }
 }
