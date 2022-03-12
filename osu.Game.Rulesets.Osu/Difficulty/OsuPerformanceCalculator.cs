@@ -69,6 +69,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             double aimDifficulty = Attributes.AimDifficulty;
 
+            if (totalSuccessfulHits == 0)
+                return 0;
+
             if (mods.Any(m => m is OsuModTouchDevice))
                 aimDifficulty = Math.Pow(aimDifficulty, 0.8);
 
@@ -116,6 +119,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double computeSpeedValue()
         {
             double speedValue = Math.Pow(Attributes.SpeedDifficulty, 3);
+
+            if (totalSuccessfulHits == 0)
+                return 0;
+
             double? deviation = calculateDeviation();
 
             switch (deviation)
@@ -141,7 +148,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double computeAccuracyValue()
         {
-            if (Attributes.HitCircleCount == 0)
+            if (Attributes.HitCircleCount == 0 || totalSuccessfulHits == 0)
                 return 0;
 
             double? deviation = calculateDeviation();
