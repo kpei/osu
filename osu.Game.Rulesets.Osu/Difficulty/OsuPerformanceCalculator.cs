@@ -168,7 +168,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 speedValue *= 0;
             else
-                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(13 / (Math.Sqrt(2) * (double)deviation));
+                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / 1.5 / (Math.Sqrt(2) * (double)deviation));
 
             // Scale the speed value with # of 50s to punish doubletapping.
             speedValue *= Math.Pow(0.98, countMeh < totalHits / 500.0 ? 0 : countMeh - totalHits / 500.0);
@@ -244,7 +244,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (modifiedAccuracy < 0)
                 return null;
 
-            double deviation = (79.5 - 6 * attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
+            double deviation = (80 - 6 * attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
             return deviation;
         }
 
