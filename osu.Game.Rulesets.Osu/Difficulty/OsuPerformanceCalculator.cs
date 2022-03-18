@@ -240,11 +240,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (attributes.HitCircleCount == 0)
                 return null;
 
-            double modifiedAccuracy = 1 - (double)(2 * countMeh + countOk + 1) / (attributes.HitCircleCount - countMiss + 2);
-            if (modifiedAccuracy < 0)
+            int greatCountOnCircles = Math.Max(0, countGreat - attributes.SliderCount - attributes.SpinnerCount);
+
+            if (greatCountOnCircles == 0 || attributes.HitCircleCount - countMiss == 0)
                 return null;
 
-            double deviation = (80 - 6 * attributes.OverallDifficulty) / (Math.Sqrt(2) * SpecialFunctions.ErfInv(modifiedAccuracy));
+            double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
+
+            // Cap greatProbability to (circleCount - 0.5) / circleCount so that SS scores don't break.
+            double greatProbability = Math.Min(greatCountOnCircles, attributes.HitCircleCount - 0.5 - countMiss) / (attributes.HitCircleCount - countMiss);
+            double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
+
             return deviation;
         }
 
