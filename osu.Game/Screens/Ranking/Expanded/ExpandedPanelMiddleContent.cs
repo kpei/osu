@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Localisation;
@@ -67,7 +68,7 @@ namespace osu.Game.Screens.Ranking.Expanded
             var topStatistics = new List<StatisticDisplay>
             {
                 new AccuracyStatistic(score.Accuracy),
-                new ComboStatistic(score.MaxCombo, !score.Statistics.TryGetValue(HitResult.Miss, out int missCount) || missCount == 0),
+                new ComboStatistic(score.MaxCombo, beatmap.MaxCombo, score.Statistics.All(stat => !stat.Key.BreaksCombo() || stat.Value == 0)),
                 new PerformanceStatistic(score),
             };
 
@@ -79,7 +80,7 @@ namespace osu.Game.Screens.Ranking.Expanded
             statisticDisplays.AddRange(topStatistics);
             statisticDisplays.AddRange(bottomStatistics);
 
-            var starDifficulty = beatmapDifficultyCache.GetDifficultyAsync(beatmap, score.Ruleset, score.Mods).Result;
+            var starDifficulty = beatmapDifficultyCache.GetDifficultyAsync(beatmap, score.Ruleset, score.Mods).GetResultSafely();
 
             AddInternal(new FillFlowContainer
             {
@@ -143,14 +144,6 @@ namespace osu.Game.Screens.Ranking.Expanded
                                 Origin = Anchor.TopCentre,
                                 AutoSizeAxes = Axes.Both,
                                 Spacing = new Vector2(5, 0),
-                                Children = new Drawable[]
-                                {
-                                    new StarRatingDisplay(starDifficulty)
-                                    {
-                                        Anchor = Anchor.CentreLeft,
-                                        Origin = Anchor.CentreLeft
-                                    },
-                                }
                             },
                             new FillFlowContainer
                             {
@@ -230,6 +223,15 @@ namespace osu.Game.Screens.Ranking.Expanded
 
             if (score.Date != default)
                 AddInternal(new PlayedOnText(score.Date));
+
+            if (starDifficulty != null)
+            {
+                starAndModDisplay.Add(new StarRatingDisplay(starDifficulty.Value)
+                {
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft
+                });
+            }
 
             if (score.Mods.Any())
             {

@@ -63,11 +63,11 @@ namespace osu.Game.Screens.Play.HUD
         [Resolved]
         private OsuConfigManager config { get; set; }
 
-        private Bindable<float> activationDelay;
+        private Bindable<double> activationDelay;
 
         protected override void LoadComplete()
         {
-            activationDelay = config.GetBindable<float>(OsuSetting.UIHoldActivationDelay);
+            activationDelay = config.GetBindable<double>(OsuSetting.UIHoldActivationDelay);
             activationDelay.BindValueChanged(v =>
             {
                 text.Text = v.NewValue > 0
@@ -80,7 +80,7 @@ namespace osu.Game.Screens.Play.HUD
             base.LoadComplete();
         }
 
-        private float positionalAdjust;
+        private float positionalAdjust = 1; // Start at 1 to handle the case where a user never send positional input.
 
         protected override bool OnMouseMove(MouseMoveEvent e)
         {
@@ -116,7 +116,7 @@ namespace osu.Game.Screens.Play.HUD
             public Action HoverLost;
 
             [BackgroundDependencyLoader]
-            private void load(OsuColour colours, Framework.Game game)
+            private void load(OsuColour colours)
             {
                 Size = new Vector2(60);
 

@@ -12,6 +12,7 @@ using osu.Game.Users;
 
 namespace osu.Game.Online.API.Requests.Responses
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public class APIUser : IEquatable<APIUser>, IUser
     {
         [JsonProperty(@"id")]
@@ -151,11 +152,14 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"scores_recent_count")]
         public int ScoresRecentCount;
 
-        [JsonProperty(@"beatmap_playcounts_count")]
-        public int BeatmapPlaycountsCount;
+        [JsonProperty(@"scores_pinned_count")]
+        public int ScoresPinnedCount;
 
-        [JsonProperty]
-        private string[] playstyle
+        [JsonProperty(@"beatmap_playcounts_count")]
+        public int BeatmapPlayCountsCount;
+
+        [JsonProperty(@"playstyle")]
+        private string[] playStyle
         {
             set => PlayStyles = value?.Select(str => Enum.Parse(typeof(APIPlayStyle), str, true)).Cast<APIPlayStyle>().ToArray();
         }
@@ -213,7 +217,7 @@ namespace osu.Game.Online.API.Requests.Responses
         public APIUserAchievement[] Achievements;
 
         [JsonProperty("monthly_playcounts")]
-        public APIUserHistoryCount[] MonthlyPlaycounts;
+        public APIUserHistoryCount[] MonthlyPlayCounts;
 
         [JsonProperty("replays_watched_counts")]
         public APIUserHistoryCount[] ReplaysWatchedCounts;

@@ -188,12 +188,12 @@ namespace osu.Game.Rulesets.Objects.Legacy
             string[] split = str.Split(':');
 
             var bank = (LegacySampleBank)Parsing.ParseInt(split[0]);
-            var addbank = (LegacySampleBank)Parsing.ParseInt(split[1]);
+            var addBank = (LegacySampleBank)Parsing.ParseInt(split[1]);
 
             string stringBank = bank.ToString().ToLowerInvariant();
             if (stringBank == @"none")
                 stringBank = null;
-            string stringAddBank = addbank.ToString().ToLowerInvariant();
+            string stringAddBank = addBank.ToString().ToLowerInvariant();
             if (stringAddBank == @"none")
                 stringAddBank = null;
 
@@ -500,12 +500,12 @@ namespace osu.Game.Rulesets.Objects.Legacy
                 => new LegacyHitSampleInfo(newName.GetOr(Name), newBank.GetOr(Bank), newVolume.GetOr(Volume), newCustomSampleBank.GetOr(CustomSampleBank), newIsLayered.GetOr(IsLayered));
 
             public bool Equals(LegacyHitSampleInfo? other)
-                => base.Equals(other) && CustomSampleBank == other.CustomSampleBank && IsLayered == other.IsLayered;
+                => base.Equals(other) && CustomSampleBank == other.CustomSampleBank;
 
             public override bool Equals(object? obj)
                 => obj is LegacyHitSampleInfo other && Equals(other);
 
-            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), CustomSampleBank, IsLayered);
+            public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), CustomSampleBank);
         }
 
         private class FileHitSampleInfo : LegacyHitSampleInfo, IEquatable<FileHitSampleInfo>
