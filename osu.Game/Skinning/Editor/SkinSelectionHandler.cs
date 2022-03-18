@@ -126,7 +126,7 @@ namespace osu.Game.Skinning.Editor
             return true;
         }
 
-        public override bool HandleFlip(Direction direction)
+        public override bool HandleFlip(Direction direction, bool flipOverOrigin)
         {
             var selectionQuad = getSelectionQuad();
             Vector2 scaleFactor = direction == Direction.Horizontal ? new Vector2(-1, 1) : new Vector2(1, -1);
@@ -135,7 +135,7 @@ namespace osu.Game.Skinning.Editor
             {
                 var drawableItem = (Drawable)b.Item;
 
-                var flippedPosition = GetFlippedPosition(direction, selectionQuad, b.ScreenSpaceSelectionPoint);
+                var flippedPosition = GetFlippedPosition(direction, flipOverOrigin ? drawableItem.Parent.ScreenSpaceDrawQuad : selectionQuad, b.ScreenSpaceSelectionPoint);
 
                 updateDrawablePosition(drawableItem, flippedPosition);
 
@@ -198,6 +198,12 @@ namespace osu.Game.Skinning.Editor
             {
                 Items = createAnchorItems((d, o) => ((Drawable)d).Origin == o, applyOrigins).ToArray()
             };
+
+            yield return new OsuMenuItem("Reset position", MenuItemType.Standard, () =>
+            {
+                foreach (var blueprint in SelectedBlueprints)
+                    ((Drawable)blueprint.Item).Position = Vector2.Zero;
+            });
 
             foreach (var item in base.GetContextMenuItemsForSelection(selection))
                 yield return item;

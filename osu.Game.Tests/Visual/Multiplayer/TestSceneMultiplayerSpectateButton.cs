@@ -1,13 +1,12 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Linq;
-using System.Threading.Tasks;
 using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Platform;
@@ -35,14 +34,14 @@ namespace osu.Game.Tests.Visual.Multiplayer
         private BeatmapManager beatmaps;
         private RulesetStore rulesets;
 
-        private IDisposable readyClickOperation;
-
         [BackgroundDependencyLoader]
         private void load(GameHost host, AudioManager audio)
         {
-            Dependencies.Cache(rulesets = new RulesetStore(ContextFactory));
-            Dependencies.Cache(beatmaps = new BeatmapManager(LocalStorage, ContextFactory, rulesets, null, audio, Resources, host, Beatmap.Default));
-            beatmaps.Import(TestResources.GetQuickTestBeatmapForImport()).Wait();
+            Dependencies.Cache(rulesets = new RealmRulesetStore(Realm));
+            Dependencies.Cache(beatmaps = new BeatmapManager(LocalStorage, Realm, rulesets, null, audio, Resources, host, Beatmap.Default));
+            Dependencies.Cache(Realm);
+
+            beatmaps.Import(TestResources.GetQuickTestBeatmapForImport()).WaitSafely();
         }
 
         [SetUp]
@@ -50,12 +49,11 @@ namespace osu.Game.Tests.Visual.Multiplayer
         {
             AvailabilityTracker.SelectedItem.BindTo(selectedItem);
 
-            importedSet = beatmaps.GetAllUsableBeatmapSetsEnumerable(IncludedDetails.All).First();
+            importedSet = beatmaps.GetAllUsableBeatmapSets().First();
             Beatmap.Value = beatmaps.GetWorkingBeatmap(importedSet.Beatmaps.First());
-            selectedItem.Value = new PlaylistItem
+            selectedItem.Value = new PlaylistItem(Beatmap.Value.BeatmapInfo)
             {
-                Beatmap = { Value = Beatmap.Value.BeatmapInfo },
-                Ruleset = { Value = Beatmap.Value.BeatmapInfo.Ruleset },
+                RulesetID = Beatmap.Value.BeatmapInfo.Ruleset.OnlineID,
             };
 
             Child = new FillFlowContainer
@@ -69,39 +67,12 @@ namespace osu.Game.Tests.Visual.Multiplayer
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Size = new Vector2(200, 50),
-                        OnSpectateClick = () =>
-                        {
-                            readyClickOperation = OngoingOperationTracker.BeginOperation();
-
-                            Task.Run(async () =>
-                            {
-                                await Client.ToggleSpectate();
-                                readyClickOperation.Dispose();
-                            });
-                        }
                     },
                     readyButton = new MultiplayerReadyButton
                     {
                         Anchor = Anchor.Centre,
                         Origin = Anchor.Centre,
                         Size = new Vector2(200, 50),
-                        OnReadyClick = () =>
-                        {
-                            readyClickOperation = OngoingOperationTracker.BeginOperation();
-
-                            Task.Run(async () =>
-                            {
-                                if (Client.IsHost && Client.LocalUser?.State == MultiplayerUserState.Ready)
-                                {
-                                    await Client.StartMatch();
-                                    return;
-                                }
-
-                                await Client.ToggleReady();
-
-                                readyClickOperation.Dispose();
-                            });
-                        }
                     }
                 }
             };
@@ -112,7 +83,7 @@ namespace osu.Game.Tests.Visual.Multiplayer
         [TestCase(MultiplayerRoomState.Playing)]
         public void TestEnabledWhenRoomOpenOrInGameplay(MultiplayerRoomState roomState)
         {
-            AddStep($"change room to {roomState}", () => Client.ChangeRoomState(roomState));
+            AddStep($"change room to {roomState}", () => MultiplayerClient.ChangeRoomState(roomState));
             assertSpectateButtonEnablement(true);
         }
 
@@ -121,16 +92,16 @@ namespace osu.Game.Tests.Visual.Multiplayer
         public void TestToggleWhenIdle(MultiplayerUserState initialState)
         {
             ClickButtonWhenEnabled<MultiplayerSpectateButton>();
-            AddUntilStep("user is spectating", () => Client.Room?.Users[0].State == MultiplayerUserState.Spectating);
+            AddUntilStep("user is spectating", () => MultiplayerClient.Room?.Users[0].State == MultiplayerUserState.Spectating);
 
             ClickButtonWhenEnabled<MultiplayerSpectateButton>();
-            AddUntilStep("user is idle", () => Client.Room?.Users[0].State == MultiplayerUserState.Idle);
+            AddUntilStep("user is idle", () => MultiplayerClient.Room?.Users[0].State == MultiplayerUserState.Idle);
         }
 
         [TestCase(MultiplayerRoomState.Closed)]
         public void TestDisabledWhenClosed(MultiplayerRoomState roomState)
         {
-            AddStep($"change room to {roomState}", () => Client.ChangeRoomState(roomState));
+            AddStep($"change room to {roomState}", () => MultiplayerClient.ChangeRoomState(roomState));
             assertSpectateButtonEnablement(false);
         }
 
@@ -144,8 +115,8 @@ namespace osu.Game.Tests.Visual.Multiplayer
         [Test]
         public void TestReadyButtonEnabledWhenHostAndUsersReady()
         {
-            AddStep("add user", () => Client.AddUser(new APIUser { Id = PLAYER_1_ID }));
-            AddStep("set user ready", () => Client.ChangeUserState(PLAYER_1_ID, MultiplayerUserState.Ready));
+            AddStep("add user", () => MultiplayerClient.AddUser(new APIUser { Id = PLAYER_1_ID }));
+            AddStep("set user ready", () => MultiplayerClient.ChangeUserState(PLAYER_1_ID, MultiplayerUserState.Ready));
 
             ClickButtonWhenEnabled<MultiplayerSpectateButton>();
             assertReadyButtonEnablement(true);
@@ -156,11 +127,11 @@ namespace osu.Game.Tests.Visual.Multiplayer
         {
             AddStep("add user and transfer host", () =>
             {
-                Client.AddUser(new APIUser { Id = PLAYER_1_ID });
-                Client.TransferHost(PLAYER_1_ID);
+                MultiplayerClient.AddUser(new APIUser { Id = PLAYER_1_ID });
+                MultiplayerClient.TransferHost(PLAYER_1_ID);
             });
 
-            AddStep("set user ready", () => Client.ChangeUserState(PLAYER_1_ID, MultiplayerUserState.Ready));
+            AddStep("set user ready", () => MultiplayerClient.ChangeUserState(PLAYER_1_ID, MultiplayerUserState.Ready));
 
             ClickButtonWhenEnabled<MultiplayerSpectateButton>();
             assertReadyButtonEnablement(false);

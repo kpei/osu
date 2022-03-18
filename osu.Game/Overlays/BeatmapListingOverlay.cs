@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Localisation;
 using osu.Framework.Graphics;
@@ -19,6 +20,7 @@ using osu.Game.Beatmaps.Drawables.Cards;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.Containers;
+using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.BeatmapListing;
 using osu.Game.Resources.Localisation.Web;
@@ -31,6 +33,11 @@ namespace osu.Game.Overlays
     {
         [Resolved]
         private PreviewTrackManager previewTrackManager { get; set; }
+
+        [Resolved]
+        private IAPIProvider api { get; set; }
+
+        private IBindable<APIUser> apiUser;
 
         private Drawable currentContent;
         private Container panelTarget;
@@ -79,7 +86,6 @@ namespace osu.Game.Overlays
                                 Padding = new MarginPadding { Horizontal = 20 },
                                 Children = new Drawable[]
                                 {
-                                    foundContent = new FillFlowContainer<BeatmapCard>(),
                                     notFoundContent = new NotFoundDrawable(),
                                     supporterRequiredContent = new SupporterRequiredDrawable(),
                                 }
@@ -94,6 +100,13 @@ namespace osu.Game.Overlays
         {
             base.LoadComplete();
             filterControl.CardSize.BindValueChanged(_ => onCardSizeChanged());
+
+            apiUser = api.LocalUser.GetBoundCopy();
+            apiUser.BindValueChanged(_ =>
+            {
+                if (api.IsLoggedIn)
+                    addContentToResultsArea(Drawable.Empty());
+            });
         }
 
         public void ShowWithSearch(string query)
@@ -140,7 +153,7 @@ namespace osu.Game.Overlays
             if (searchResult.Type == BeatmapListingFilterControl.SearchResultType.SupporterOnlyFilters)
             {
                 supporterRequiredContent.UpdateText(searchResult.SupporterOnlyFiltersUsed);
-                addContentToPlaceholder(supporterRequiredContent);
+                addContentToResultsArea(supporterRequiredContent);
                 return;
             }
 
@@ -151,13 +164,13 @@ namespace osu.Game.Overlays
                 //No matches case
                 if (!newCards.Any())
                 {
-                    addContentToPlaceholder(notFoundContent);
+                    addContentToResultsArea(notFoundContent);
                     return;
                 }
 
                 var content = createCardContainerFor(newCards);
 
-                panelLoadTask = LoadComponentAsync(foundContent = content, addContentToPlaceholder, (cancellationToken = new CancellationTokenSource()).Token);
+                panelLoadTask = LoadComponentAsync(foundContent = content, addContentToResultsArea, (cancellationToken = new CancellationTokenSource()).Token);
             }
             else
             {
@@ -186,13 +199,19 @@ namespace osu.Game.Overlays
                 AutoSizeAxes = Axes.Y,
                 Spacing = new Vector2(10),
                 Alpha = 0,
-                Margin = new MarginPadding { Vertical = 15 },
+                Margin = new MarginPadding
+                {
+                    Top = 15,
+                    // the + 20 adjustment is roughly eyeballed in order to fit all of the expanded content height after it's scaled
+                    // as well as provide visual balance to the top margin.
+                    Bottom = ExpandedContentScrollContainer.HEIGHT + 20
+                },
                 ChildrenEnumerable = newCards
             };
             return content;
         }
 
-        private void addContentToPlaceholder(Drawable content)
+        private void addContentToResultsArea(Drawable content)
         {
             Loading.Hide();
             lastFetchDisplayedTime = Time.Current;
@@ -204,37 +223,27 @@ namespace osu.Game.Overlays
 
             if (lastContent != null)
             {
-                lastContent.FadeOut(100, Easing.OutQuint);
-
-                // Consider the case when the new content is smaller than the last content.
-                // If the auto-size computation is delayed until fade out completes, the background remain high for too long making the resulting transition to the smaller height look weird.
-                // At the same time, if the last content's height is bypassed immediately, there is a period where the new content is at Alpha = 0 when the auto-sized height will be 0.
-                // To resolve both of these issues, the bypass is delayed until a point when the content transitions (fade-in and fade-out) overlap and it looks good to do so.
-                var sequence = lastContent.Delay(25).Schedule(() => lastContent.BypassAutoSizeAxes = Axes.Y);
-
-                if (lastContent == foundContent)
-                {
-                    sequence.Then().Schedule(() =>
-                    {
-                        foundContent.Expire();
-                        foundContent = null;
-                    });
-                }
+                lastContent.FadeOut();
+                if (!isPlaceholderContent(lastContent))
+                    lastContent.Expire();
             }
 
             if (!content.IsAlive)
                 panelTarget.Add(content);
 
-            content.FadeInFromZero(200, Easing.OutQuint);
+            content.FadeInFromZero();
             currentContent = content;
-            // currentContent may be one of the placeholders, and still have BypassAutoSizeAxes set to Y from the last fade-out.
-            // restore to the initial state.
-            currentContent.BypassAutoSizeAxes = Axes.None;
         }
+
+        /// <summary>
+        /// Whether <paramref name="drawable"/> is a static placeholder reused multiple times by this overlay.
+        /// </summary>
+        private bool isPlaceholderContent(Drawable drawable)
+            => drawable == notFoundContent || drawable == supporterRequiredContent;
 
         private void onCardSizeChanged()
         {
-            if (foundContent == null || !foundContent.Any())
+            if (foundContent?.IsAlive != true || !foundContent.Any())
                 return;
 
             Loading.Show();
@@ -259,10 +268,6 @@ namespace osu.Game.Overlays
 
         public class NotFoundDrawable : CompositeDrawable
         {
-            // required for scheduled tasks to complete correctly
-            // (see `addContentToPlaceholder()` and the scheduled `BypassAutoSizeAxes` set during fade-out in outer class above)
-            public override bool IsPresent => base.IsPresent || Scheduler.HasPendingTasks;
-
             public NotFoundDrawable()
             {
                 RelativeSizeAxes = Axes.X;
@@ -307,10 +312,6 @@ namespace osu.Game.Overlays
         // (https://github.com/ppy/osu-framework/issues/4530)
         public class SupporterRequiredDrawable : CompositeDrawable
         {
-            // required for scheduled tasks to complete correctly
-            // (see `addContentToPlaceholder()` and the scheduled `BypassAutoSizeAxes` set during fade-out in outer class above)
-            public override bool IsPresent => base.IsPresent || Scheduler.HasPendingTasks;
-
             private LinkFlowContainer supporterRequiredText;
 
             public SupporterRequiredDrawable()

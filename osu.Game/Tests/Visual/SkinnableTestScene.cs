@@ -41,9 +41,9 @@ namespace osu.Game.Tests.Visual
         }
 
         [BackgroundDependencyLoader]
-        private void load(AudioManager audio, SkinManager skinManager)
+        private void load()
         {
-            var dllStore = new DllResourceStore(DynamicCompilationOriginal.GetType().Assembly);
+            var dllStore = new DllResourceStore(GetType().Assembly);
 
             metricsSkin = new TestLegacySkin(new SkinInfo { Name = "metrics-skin" }, new NamespacedResourceStore<byte[]>(dllStore, "Resources/metrics_skin"), this, true);
             defaultSkin = new DefaultLegacySkin(this);
@@ -159,7 +159,7 @@ namespace osu.Game.Tests.Visual
         public IResourceStore<byte[]> Files => null;
         public new IResourceStore<byte[]> Resources => base.Resources;
         public IResourceStore<TextureUpload> CreateTextureLoaderStore(IResourceStore<byte[]> underlyingStore) => host.CreateTextureLoaderStore(underlyingStore);
-        RealmContextFactory IStorageResourceProvider.RealmContextFactory => null;
+        RealmAccess IStorageResourceProvider.RealmAccess => null;
 
         #endregion
 
