@@ -177,9 +177,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             else
                 speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / 1.5 / (Math.Sqrt(2) * (double)deviation));
 
-            // Scale the speed value with # of 50s to punish doubletapping.
-            speedValue *= Math.Pow(0.98, countMeh < totalHits / 500.0 ? 0 : countMeh - totalHits / 500.0);
-
             return speedValue;
         }
 
@@ -196,7 +193,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 return 0;
 
-            double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 1.7);
+            double accuracyValue = 280 * Math.E * Math.Exp(-(double)deviation / 4);
+            // double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 1.7);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
@@ -254,8 +252,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
 
-            // Cap greatProbability to (circleCount - 0.5) / circleCount so that SS scores don't break.
-            double greatProbability = Math.Min(greatCountOnCircles, attributes.HitCircleCount - 0.5 - countMiss) / (attributes.HitCircleCount - countMiss);
+            // Add 0.5 circles so that SS scores don't break.
+            double greatProbability = greatCountOnCircles / (attributes.HitCircleCount - countMiss + 1.0);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;
