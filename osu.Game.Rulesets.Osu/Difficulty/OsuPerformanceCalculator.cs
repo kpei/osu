@@ -175,7 +175,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 speedValue *= 0;
             else
-                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / 1.5 / (Math.Sqrt(2) * (double)deviation));
+                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / (Math.Sqrt(2) * (double)deviation));
 
             return speedValue;
         }
@@ -193,8 +193,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (deviation == null)
                 return 0;
 
-            double accuracyValue = 280 * Math.E * Math.Exp(-(double)deviation / 4);
-            // double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 1.7);
+            double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 2);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
