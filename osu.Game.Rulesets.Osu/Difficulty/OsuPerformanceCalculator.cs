@@ -22,6 +22,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
+        private double estimatedDeviation;
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
@@ -39,6 +40,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             countMeh = score.Statistics.GetValueOrDefault(HitResult.Meh);
             countMiss = score.Statistics.GetValueOrDefault(HitResult.Miss);
             effectiveMissCount = calculateEffectiveMissCount(osuAttributes);
+            estimatedDeviation = calculateDeviation(osuAttributes) ?? double.PositiveInfinity;
 
             double multiplier = 1.12; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
@@ -75,7 +77,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 Accuracy = accuracyValue,
                 Flashlight = flashlightValue,
                 EffectiveMissCount = effectiveMissCount,
-                Total = totalValue
+                Total = totalValue,
+                EstimatedUnstableRate = 10 * estimatedDeviation
             };
         }
 
@@ -124,16 +127,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 aimValue *= sliderNerfFactor;
             }
 
-            // Scale the aim value with accuracy and OD.
-            double? deviation = calculateDeviation(attributes);
-
             if (attributes.HitCircleCount == 0)
                 return aimValue;
 
-            if (deviation == null)
-                aimValue *= 0;
-            else
-                aimValue *= 4169 / 4050.0 * SpecialFunctions.Erf(50 / (Math.Sqrt(2) * (double)deviation));
+            aimValue *= 4169 / 4050.0 * SpecialFunctions.Erf(50 / (Math.Sqrt(2) * estimatedDeviation));
 
             return aimValue;
         }
@@ -169,16 +166,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
             }
 
-            // Scale the speed value with accuracy and OD.
-            double? deviation = calculateDeviation(attributes);
-
-            if (deviation == null)
-                speedValue *= 0;
-            else
-                speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / 1.5 / (Math.Sqrt(2) * (double)deviation));
-
-            // Scale the speed value with # of 50s to punish doubletapping.
-            speedValue *= Math.Pow(0.98, countMeh < totalHits / 500.0 ? 0 : countMeh - totalHits / 500.0);
+            speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / (Math.Sqrt(2) * estimatedDeviation));
 
             return speedValue;
         }
@@ -191,12 +179,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (attributes.HitCircleCount == 0)
                 return 0;
 
-            double? deviation = calculateDeviation(attributes);
-
-            if (deviation == null)
-                return 0;
-
-            double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 1.7);
+            double accuracyValue = 100 * Math.Pow(7.5 / estimatedDeviation, 2);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
@@ -254,8 +237,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
 
-            // Cap greatProbability to (circleCount - 0.5) / circleCount so that SS scores don't break.
-            double greatProbability = Math.Min(greatCountOnCircles, attributes.HitCircleCount - 0.5 - countMiss) / (attributes.HitCircleCount - countMiss);
+            // Add 0.5 circles so that SS scores don't break.
+            double greatProbability = greatCountOnCircles / (attributes.HitCircleCount - countMiss + 1.0);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;
