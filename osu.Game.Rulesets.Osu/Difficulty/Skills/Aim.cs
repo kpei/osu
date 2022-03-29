@@ -20,7 +20,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public class Aim : Skill
     {
         private readonly List<(double, double)> difficulties = new List<(double, double)>();
-        private const double fc_probability_threshold = 1 / 1.5;
+        private const double fc_probability_threshold = 1 / 2.0;
 
         public Aim(Mod[] mods)
             : base(mods)

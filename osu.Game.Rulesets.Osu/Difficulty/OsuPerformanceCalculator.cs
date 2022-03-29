@@ -23,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
-        private const double fc_probability_threshold = 1 / 1.5;
+        private const double fc_probability_threshold = 1 / 2.0;
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
@@ -94,6 +94,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                     return 0;
             }
 
+            if (score.Mods.Any(h => h is OsuModHidden))
+            {
+                // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
+                aimValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
+            }
+
             double deviationScaling = SpecialFunctions.Erf(50 / (Math.Sqrt(2) * (double)deviation));
             aimValue *= deviationScaling;
 
@@ -121,6 +127,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                     return 0;
             }
 
+            if (score.Mods.Any(m => m is OsuModHidden))
+            {
+                // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
+                speedValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
+            }
+
             double deviationScaling = SpecialFunctions.Erf(20 / (Math.Sqrt(2) * (double)deviation));
             speedValue *= deviationScaling;
 
@@ -143,6 +155,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             }
 
             double accuracyValue = 70 * Math.Pow(8 / (double)deviation, 2);
+
+            if (score.Mods.Any(m => m is OsuModHidden))
+                accuracyValue *= 1.08;
 
             return accuracyValue;
         }
@@ -192,8 +207,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
 
-            // Cap greatProbability to (circleCount - 0.5) / circleCount so that SS scores don't break.
-            double greatProbability = Math.Min(greatCountOnCircles, attributes.HitCircleCount - 0.5 - countMiss) / (attributes.HitCircleCount - countMiss);
+            double greatProbability = Beta.InvCDF(greatCountOnCircles, 1 + countOk + countMeh, fc_probability_threshold);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;
