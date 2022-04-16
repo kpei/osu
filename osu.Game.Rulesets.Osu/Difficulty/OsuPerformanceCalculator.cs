@@ -252,7 +252,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (attributes.HitCircleCount == 0)
                 return null;
 
-            double greatCountOnSpeedCircles = Math.Max(0, countGreat - Math.Max(0, attributes.HitCircleCount - attributes.SpeedRelevantNoteCount) - attributes.SliderCount - attributes.SpinnerCount);
+            // Max speed circle count as speed relevant note count can be higher than circle count
+            double speedCircleCount = Math.Min(attributes.SpeedRelevantNoteCount, attributes.HitCircleCount);
+
+            double greatCountOnSpeedCircles = Math.Max(0, countGreat - (attributes.HitCircleCount - speedCircleCount) - attributes.SliderCount - attributes.SpinnerCount);
 
             if (greatCountOnSpeedCircles == 0 || attributes.SpeedRelevantNoteCount - countMiss <= 0)
                 return null;
@@ -260,7 +263,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
 
             // Add 0.5 circles so that SS scores don't break.
-            double greatProbability = greatCountOnSpeedCircles / (attributes.SpeedRelevantNoteCount - countMiss + 1.0);
+            double greatProbability = greatCountOnSpeedCircles / (speedCircleCount - countMiss + 1.0);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;
