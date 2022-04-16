@@ -28,6 +28,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// </summary>
         protected virtual double DifficultyMultiplier => 1.06;
 
+        protected List<double> objectStrains = new List<double>();
+
         protected OsuStrainSkill(Mod[] mods)
             : base(mods)
         {
@@ -56,6 +58,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             }
 
             return difficulty * DifficultyMultiplier;
+        }
+
+        public double CountRelevantNotes()
+        {
+            List<double> strains = GetCurrentStrainPeaks().ToList();
+            double topStrain = objectStrains.Max();
+
+            return objectStrains.Sum(s => s / topStrain);;
         }
     }
 }
