@@ -23,6 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double effectiveMissCount;
         private double estimatedDeviation;
+        private double estimatedSpeedDeviation;
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
@@ -41,6 +42,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             countMiss = score.Statistics.GetValueOrDefault(HitResult.Miss);
             effectiveMissCount = calculateEffectiveMissCount(osuAttributes);
             estimatedDeviation = calculateDeviation(osuAttributes) ?? double.PositiveInfinity;
+            estimatedSpeedDeviation = calculateSpeedDeviation(osuAttributes) ?? double.PositiveInfinity;
 
             double multiplier = 1.12; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
@@ -78,7 +80,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 Flashlight = flashlightValue,
                 EffectiveMissCount = effectiveMissCount,
                 Total = totalValue,
-                EstimatedUnstableRate = 10 * estimatedDeviation
+                EstimatedUnstableRate = 10 * estimatedDeviation,
+                EstimatedSpeedUnstableRate = 10 * estimatedSpeedDeviation
             };
         }
 
@@ -166,7 +169,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
             }
 
-            speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / (Math.Sqrt(2) * estimatedDeviation));
+            speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / (Math.Sqrt(2) * estimatedSpeedDeviation));
 
             return speedValue;
         }
@@ -239,6 +242,28 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             // Add 0.5 circles so that SS scores don't break.
             double greatProbability = greatCountOnCircles / (attributes.HitCircleCount - countMiss + 1.0);
+            double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
+
+            return deviation;
+        }
+
+        private double? calculateSpeedDeviation(OsuDifficultyAttributes attributes)
+        {
+            if (attributes.HitCircleCount == 0)
+                return null;
+
+            // Max speed circle count as speed relevant note count can be higher than circle count
+            double speedCircleCount = Math.Min(attributes.SpeedRelevantNoteCount, attributes.HitCircleCount);
+
+            double greatCountOnSpeedCircles = Math.Max(0, countGreat - (attributes.HitCircleCount - speedCircleCount) - attributes.SliderCount - attributes.SpinnerCount);
+
+            if (greatCountOnSpeedCircles == 0 || speedCircleCount - countMiss <= 0)
+                return null;
+
+            double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
+
+            // Add 0.5 circles so that SS scores don't break.
+            double greatProbability = greatCountOnSpeedCircles / (speedCircleCount - countMiss + 1.0);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;

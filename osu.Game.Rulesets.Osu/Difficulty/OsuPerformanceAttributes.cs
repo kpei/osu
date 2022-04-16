@@ -27,6 +27,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("estimated_unstable_rate")]
         public double EstimatedUnstableRate { get; set; }
 
+        [JsonProperty("estimated_speed_unstable_rate")]
+        public double EstimatedSpeedUnstableRate { get; set; }
+
         public override IEnumerable<PerformanceDisplayAttribute> GetAttributesForDisplay()
         {
             foreach (var attribute in base.GetAttributesForDisplay())

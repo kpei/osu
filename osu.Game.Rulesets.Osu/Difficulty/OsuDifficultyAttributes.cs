@@ -38,6 +38,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("slider_factor")]
         public double SliderFactor { get; set; }
 
+        [JsonProperty("speed_relevant_note_count")]
+        public double SpeedRelevantNoteCount { get; set; }
+
         /// <summary>
         /// The perceived approach rate inclusive of rate-adjusting mods (DT/HT/etc).
         /// </summary>
