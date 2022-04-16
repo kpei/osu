@@ -254,7 +254,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double greatCountOnSpeedCircles = Math.Max(0, countGreat - (attributes.HitCircleCount - attributes.SpeedRelevantNoteCount) - attributes.SliderCount - attributes.SpinnerCount);
 
-            if (greatCountOnSpeedCircles == 0 || attributes.HitCircleCount - countMiss == 0)
+            if (greatCountOnSpeedCircles == 0 || attributes.SpeedRelevantNoteCount - countMiss <= 0)
                 return null;
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
