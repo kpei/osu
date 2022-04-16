@@ -24,10 +24,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("effective_miss_count")]
         public double EffectiveMissCount { get; set; }
 
-        [JsonProperty("estimated_unstable_rate")]
+        [JsonProperty("estimated_ur")]
         public double EstimatedUnstableRate { get; set; }
 
-        [JsonProperty("estimated_speed_unstable_rate")]
+        [JsonProperty("estimated_speed_ur")]
         public double EstimatedSpeedUnstableRate { get; set; }
 
         public override IEnumerable<PerformanceDisplayAttribute> GetAttributesForDisplay()
