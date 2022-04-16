@@ -65,7 +65,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             List<double> strains = GetCurrentStrainPeaks().ToList();
             double topStrain = objectStrains.Max();
 
-            return objectStrains.Sum(s => s / topStrain);;
+            return objectStrains.Sum(s => s / topStrain);
         }
     }
 }
