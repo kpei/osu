@@ -159,8 +159,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             currentStrain *= strainDecay(current.DeltaTime);
             currentStrain += strainValueOf(current) * skillMultiplier;
 
-            objectStrains.Add(currentStrain);
-
             return currentStrain;
         }
     }
