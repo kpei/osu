@@ -240,7 +240,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
 
-            // Add 0.5 circles so that SS scores don't break.
+            // Add 1 circle so that SS scores don't break.
             double greatProbability = greatCountOnCircles / (attributes.HitCircleCount - countMiss + 1.0);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
@@ -262,7 +262,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
 
-            // Add 0.5 circles so that SS scores don't break.
+            // Add 1 circle so that SS scores don't break.
             double greatProbability = greatCountOnSpeedCircles / (speedCircleCount - countMiss + 1.0);
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
