@@ -169,7 +169,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
             }
 
-            speedValue *= 120.289 / 108 * SpecialFunctions.Erf(20 / (Math.Sqrt(2) * estimatedSpeedDeviation));
+            speedValue *= 120.289 / 108 * Math.Pow(SpecialFunctions.Erf(26 / (Math.Sqrt(2) * estimatedSpeedDeviation)), 2);
 
             return speedValue;
         }
