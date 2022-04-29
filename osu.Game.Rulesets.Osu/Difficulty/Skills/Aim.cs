@@ -212,7 +212,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             // We multiply aim skill and tap skill to get the total skill.
             // We then take the square root so that applying DT multiplies skill by 1.5, instead of by 2.25.
-            double skillLevel = Math.Sqrt(aimSkillLevel * tapSkillLevel);
+            double skillLevel = aimSkillLevel + tapSkillLevel;
             return skillLevel;
         }
     }
