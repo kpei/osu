@@ -19,7 +19,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     /// </summary>
     public class Aim : Skill
     {
-        private readonly List<(double, double)> difficulties = new List<(double, double)>();
+        private readonly List<double> aimDifficulties = new List<double>();
+        private readonly List<double> tapDifficulties = new List<double>();
         private const double fc_probability_threshold = 1 / 2.0;
 
         public Aim(Mod[] mods)
@@ -28,9 +29,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the player's standard deviation on an object if their skill level equals 1, a measure defined as "difficulty".
-        /// Distances are normalized with respect to the radius: 1 distance = 1 radii.
+        /// Calculates the player's standard deviation on an object if their skill level equals 1, a measure defined as "aim difficulty".
         /// The higher the standard deviation, the more difficult the object is to hit.
+        /// Distances are normalized with respect to the radius: 1 distance = 1 radii.
         /// </summary>
         /// <param name="current">
         /// The object's difficulty to calculate.
@@ -38,21 +39,72 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// <returns>
         /// The difficulty of the object.
         /// </returns>
-        private (double, double) difficultyValueOf(DifficultyHitObject current)
+        private double calculateAimDifficulty(DifficultyHitObject current)
         {
             var osuCurrObj = (OsuDifficultyHitObject)current;
             if (osuCurrObj.BaseObject is Spinner)
-                return (0, 0);
+                return 0;
 
             // Aim deviation is proportional to velocity.
-            double difficulty = osuCurrObj.LazyJumpDistance / osuCurrObj.StrainTime;
+            double aimDifficulty = osuCurrObj.LazyJumpDistance / osuCurrObj.StrainTime;
 
-            return (difficulty, 0);
+            return aimDifficulty;
+        }
+
+        private double initialVelocity;
+        private double finalVelocity;
+
+        /// <summary>
+        /// Calculates how long the player stays on a note by finding the path of minimum jerk (quintic)
+        /// given the initial velocity (player's velocity at the end of the previous note)
+        /// and final velocity (player's velocity at the end of the this note).
+        /// Initial and final velocities can range from 0 to distance / time.
+        /// The difficulty is the reciprocal of the time the player stays on the note.
+        /// </summary>
+        /// <param name="current">
+        /// The object's difficulty to calculate.
+        /// </param>
+        /// <returns>
+        /// The "tap precision" of the note, which is the reciprocal of the amount of time spent on the note.
+        /// </returns>
+        private double calculateTapPrecision(DifficultyHitObject current)
+        {
+            var osuCurrObj = (OsuDifficultyHitObject)current;
+            double radius = ((OsuHitObject)osuCurrObj.BaseObject).Radius;
+
+            if (osuCurrObj.BaseObject is Spinner)
+                return 0;
+
+            // Assume that the player is already on the note if the notes are 50% overlapped.
+            if (osuCurrObj.LazyJumpDistance < 1)
+            {
+                return 1 / osuCurrObj.StrainTime;
+            }
+
+            double rawDistance = osuCurrObj.LazyJumpDistance * radius;
+            double deltaTime = osuCurrObj.StrainTime;
+
+            // Currently set to zero, meaning snap aim is assumed.
+            // Eventually, when the tendency for a player to flow aim is looked into, this will be updated to a function.
+            finalVelocity = 0;
+
+            double a3 = (10 * rawDistance - 4 * deltaTime * finalVelocity - 6 * deltaTime * initialVelocity) / Math.Pow(deltaTime, 3);
+            double a4 = (-15 * rawDistance + 7 * deltaTime * finalVelocity + 8 * deltaTime * initialVelocity) / Math.Pow(deltaTime, 4);
+            double a5 = (6 * rawDistance - 3 * deltaTime * (finalVelocity + initialVelocity)) / Math.Pow(deltaTime, 5);
+
+            double position(double t) => initialVelocity * t + a3 * t * t * t + a4 * t * t * t * t + a5 * t * t * t * t * t;
+            double positionMinusRadius(double t) => position(t) - (rawDistance - radius);
+
+            double root = Brent.FindRoot(positionMinusRadius, 0, osuCurrObj.DeltaTime);
+
+            initialVelocity = finalVelocity;
+
+            double timeInCircle = deltaTime - root;
+            return 1 / timeInCircle;
         }
 
         /// <summary>
         /// Calculates the probability of hitting an object with a certain difficulty and skill level.
-        /// The player's hits follow a normal distribution, so the CDF of the normal distribution is used.
         /// </summary>
         /// <param name="difficulty">
         /// The difficulty of the object.
@@ -75,24 +127,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the probability of FC'ing a map given a skill level.
+        /// Calculates the probability of FC'ing a map given a skill level and a list of difficulties.
         /// </summary>
         /// <param name="skill">
         /// The player's skill level.
         /// </param>
+        /// <param name="difficulties">
+        /// List of difficulties to iterate through.
+        /// </param>
         /// <returns>
         /// The probability of FC'ing a map.
         /// </returns>
-        private double getFcProbability(double skill)
+        private double getFcProbability(double skill, IEnumerable<double> difficulties)
         {
-            double fcProbability = 1;
-
-            foreach ((double xDifficulty, double yDifficulty) in difficulties)
-            {
-                fcProbability *= hitProbabilityOf(xDifficulty, skill) * hitProbabilityOf(yDifficulty, skill);
-            }
-
-            return fcProbability;
+            return difficulties.Aggregate<double, double>(1, (current, difficulty) => current * hitProbabilityOf(difficulty, skill));
         }
 
         /// <summary>
@@ -104,12 +152,35 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         /// <returns>
         /// The skill level such that the probability of FC'ing the map is <see cref="fc_probability_threshold"/>.
         /// </returns>
-        private double getSkillLevel()
+        private double getAimSkillLevel()
         {
-            double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill) - fc_probability_threshold;
+            double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill, aimDifficulties) - fc_probability_threshold;
 
             const double guess_lower_bound = 0;
-            const double guess_upper_bound = 2;
+            const double guess_upper_bound = 1;
+
+            try
+            {
+                double skillLevel = Brent.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
+                return skillLevel;
+            }
+            catch (NonConvergenceException)
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// We want to find the tap skill required such that the probability that the player always taps when the cursor
+        /// is on top of the circle (assume perfect aim) is <see cref="fc_probability_threshold"/>.
+        /// </summary>
+        /// <returns></returns>
+        private double getTapSkillLevel()
+        {
+            double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill, tapDifficulties) - fc_probability_threshold;
+
+            const double guess_lower_bound = 0;
+            const double guess_upper_bound = 1;
 
             try
             {
@@ -124,16 +195,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
         protected override void Process(DifficultyHitObject current)
         {
-            (double, double) difficulty = difficultyValueOf(current);
-            difficulties.Add(difficulty);
+            double aimDifficulty = calculateAimDifficulty(current);
+            aimDifficulties.Add(aimDifficulty);
+
+            double tapDifficulty = calculateTapPrecision(current);
+            tapDifficulties.Add(tapDifficulty);
         }
 
         public override double DifficultyValue()
         {
-            if (difficulties.Sum(i => i.Item1) == 0)
+            if (aimDifficulties.Sum() == 0)
                 return 0;
 
-            double skillLevel = getSkillLevel();
+            double aimSkillLevel = getAimSkillLevel();
+            double tapSkillLevel = getTapSkillLevel();
+
+            // We multiply aim skill and tap skill to get the total skill.
+            // We then take the square root so that applying DT multiplies skill by 1.5, instead of by 2.25.
+            double skillLevel = Math.Sqrt(aimSkillLevel * tapSkillLevel);
             return skillLevel;
         }
     }
