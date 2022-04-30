@@ -21,7 +21,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     {
         private readonly List<double> aimDifficulties = new List<double>();
         private readonly List<double> tapDifficulties = new List<double>();
-        private const double fc_probability_threshold = 1 / 2.0;
+        private const double fc_probability_threshold = 1 / 15.0;
 
         public Aim(Mod[] mods)
             : base(mods)
