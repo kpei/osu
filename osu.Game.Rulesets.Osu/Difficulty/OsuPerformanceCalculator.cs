@@ -23,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
-        private const double fc_probability_threshold = 1 / 2.0;
+        private const double fc_probability_threshold = 1 / 15.0;
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
@@ -103,6 +103,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double deviationScaling = SpecialFunctions.Erf(50 / (Math.Sqrt(2) * (double)deviation));
             aimValue *= deviationScaling;
 
+            if (attributes.ApproachRate > 10)
+            {
+                double arBonus = 1 + 0.1 * 2700 * (1 / (150 * (13 - attributes.ApproachRate)) + (7 - attributes.ApproachRate) / 1350);
+                aimValue *= arBonus;
+            }
+
             return aimValue;
         }
 
@@ -136,6 +142,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             double deviationScaling = SpecialFunctions.Erf(20 / (Math.Sqrt(2) * (double)deviation));
             speedValue *= deviationScaling;
 
+            if (attributes.ApproachRate > 10)
+            {
+                double arBonus = 1 + 0.1 * 2700 * (1 / (150 * (13 - attributes.ApproachRate)) + (7 - attributes.ApproachRate) / 1350);
+                speedValue *= arBonus;
+            }
+
             return speedValue;
         }
 
@@ -154,7 +166,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return 0;
             }
 
-            double accuracyValue = 70 * Math.Pow(8 / (double)deviation, 2);
+            double accuracyValue = 90 * Math.Pow(8 / (double)deviation, 2);
 
             if (score.Mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
