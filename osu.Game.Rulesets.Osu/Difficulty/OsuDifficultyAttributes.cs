@@ -19,6 +19,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double AimDifficulty { get; set; }
 
         /// <summary>
+        /// The difficulty corresponding to the coordination skill.
+        /// </summary>
+        [JsonProperty("coordination_difficulty")]
+        public double CoordinationDifficulty { get; set; }
+
+        /// <summary>
         /// The difficulty corresponding to the speed skill.
         /// </summary>
         [JsonProperty("speed_difficulty")]
@@ -87,6 +93,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             yield return (ATTRIB_ID_APPROACH_RATE, ApproachRate);
             yield return (ATTRIB_ID_MAX_COMBO, MaxCombo);
             yield return (ATTRIB_ID_DIFFICULTY, StarRating);
+            yield return (ATTRIB_ID_COORDINATION, CoordinationDifficulty);
 
             if (ShouldSerializeFlashlightRating())
                 yield return (ATTRIB_ID_FLASHLIGHT, FlashlightDifficulty);
@@ -106,6 +113,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             StarRating = values[ATTRIB_ID_DIFFICULTY];
             FlashlightDifficulty = values.GetValueOrDefault(ATTRIB_ID_FLASHLIGHT);
             SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
+            CoordinationDifficulty = values[ATTRIB_ID_COORDINATION];
         }
 
         #region Newtonsoft.Json implicit ShouldSerialize() methods

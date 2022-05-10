@@ -20,8 +20,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 {
     public class OsuDifficultyCalculator : DifficultyCalculator
     {
-        private const double aim_scaling = 24.3;
+        private const double aim_scaling = 24.5;
         private const double aim_exp = 0.829842642;
+        private const double coordination_scaling = 36.75;
+        private const double coordination_exp = 0.829842642;
         private const double tap_scaling = 0.125;
         private const double tap_exp = 0.5;
 
@@ -38,13 +40,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return new OsuDifficultyAttributes { Mods = mods };
 
             double aimRating = Math.Pow(skills[0].DifficultyValue(), aim_exp) * aim_scaling;
-            double speedRating = Math.Pow(skills[1].DifficultyValue(), tap_exp) * tap_scaling;
-            double flashlightRating = Math.Sqrt(skills[2].DifficultyValue()) * 0.0675;
+            double coordinationRating = Math.Pow(skills[1].DifficultyValue(), coordination_exp) * coordination_scaling;
+            double speedRating = Math.Pow(skills[2].DifficultyValue(), tap_exp) * tap_scaling;
+            double flashlightRating = Math.Sqrt(skills[3].DifficultyValue()) * 0.0675;
 
             if (mods.Any(h => h is OsuModRelax))
                 speedRating = 0.0;
 
-            double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(speedRating, 3));
+            double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(coordinationRating, 3) + Math.Pow(speedRating, 3));
 
             double preempt = IBeatmapDifficultyInfo.DifficultyRange(beatmap.Difficulty.ApproachRate, 1800, 1200, 450) / clockRate;
             double drainRate = beatmap.Difficulty.DrainRate;
@@ -59,6 +62,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 StarRating = starRating,
                 Mods = mods,
                 AimDifficulty = aimRating,
+                CoordinationDifficulty = coordinationRating,
                 SpeedDifficulty = speedRating,
                 FlashlightDifficulty = flashlightRating,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
@@ -95,6 +99,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return new Skill[]
             {
                 new Aim(mods),
+                new Coordination(mods),
                 new Speed(mods, hitWindowGreat),
                 new Flashlight(mods)
             };
