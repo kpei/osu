@@ -74,7 +74,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (effectiveMissCount > 0)
             {
                 double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
-                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + countMiss, fc_probability_threshold);
+                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + effectiveMissCount, fc_probability_threshold);
                 double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
                 aimDifficulty *= missPenalty;
             }
@@ -119,7 +119,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (effectiveMissCount > 0)
             {
                 double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
-                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + countMiss, fc_probability_threshold);
+                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + effectiveMissCount, fc_probability_threshold);
                 double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
                 coordinationDifficulty *= missPenalty;
             }
