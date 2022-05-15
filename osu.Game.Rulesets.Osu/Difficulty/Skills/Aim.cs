@@ -103,12 +103,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill, aimDifficulties) - fc_probability_threshold;
 
-            const double guess_lower_bound = 0;
-            const double guess_upper_bound = 1;
+            // The lower bound must be the skill level such that the probability of hitting the hardest note is fc_probability_threshold.
+            double guessLowerBound = SpecialFunctions.ErfInv(fc_probability_threshold) * aimDifficulties.Max() * Math.Sqrt(2);
+
+            // The upper bound must be the skill level such that the probability of hitting every note in the map,
+            // assuming each note's difficulty is the same as the difficulty of the hardest note, is fc_probability_threshold.
+            double guessUpperBound = SpecialFunctions.ErfInv(Math.Pow(fc_probability_threshold, 1.0 / aimDifficulties.Count)) * aimDifficulties.Max() * Math.Sqrt(2);
 
             try
             {
-                double skillLevel = Brent.FindRootExpand(fcProbabilityMinusThreshold, guess_lower_bound, guess_upper_bound);
+                double skillLevel = Brent.FindRoot(fcProbabilityMinusThreshold, guessLowerBound, guessUpperBound);
                 return skillLevel;
             }
             catch (NonConvergenceException)
