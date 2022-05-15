@@ -20,9 +20,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 {
     public class OsuDifficultyCalculator : DifficultyCalculator
     {
-        private const double aim_scaling = 24.5;
+        private const double aim_scaling = 25.125;
         private const double aim_exp = 0.829842642;
-        private const double coordination_scaling = 36.75;
+        private const double coordination_scaling = 1.5 * aim_scaling;
         private const double coordination_exp = 0.829842642;
         private const double tap_scaling = 0.125;
         private const double tap_exp = 0.5;

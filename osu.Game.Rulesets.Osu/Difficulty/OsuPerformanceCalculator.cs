@@ -201,7 +201,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return 0;
             }
 
-            double accuracyValue = 125 * Math.Pow(8 / (double)deviation, 2);
+            double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 2);
 
             if (score.Mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
