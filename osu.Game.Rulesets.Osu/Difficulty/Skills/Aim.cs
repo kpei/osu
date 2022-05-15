@@ -45,7 +45,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 return 0;
 
             // Aim deviation is proportional to velocity.
-            double aimDifficulty = osuCurrObj.LazyJumpDistance / osuCurrObj.StrainTime;
+            double aimDifficulty = osuCurrObj.MinimumJumpDistance / osuCurrObj.StrainTime;
 
             return aimDifficulty;
         }
