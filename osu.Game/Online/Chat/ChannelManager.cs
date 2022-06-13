@@ -14,7 +14,7 @@ using osu.Game.Input;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
-using osu.Game.Overlays.Chat.Tabs;
+using osu.Game.Overlays.Chat.Listing;
 
 namespace osu.Game.Online.Chat
 {
@@ -61,8 +61,7 @@ namespace osu.Game.Online.Chat
         /// </summary>
         public IBindableList<Channel> AvailableChannels => availableChannels;
 
-        [Resolved]
-        private IAPIProvider api { get; set; }
+        private readonly IAPIProvider api;
 
         [Resolved]
         private UserLookupCache users { get; set; }
@@ -71,8 +70,9 @@ namespace osu.Game.Online.Chat
 
         private readonly IBindable<bool> isIdle = new BindableBool();
 
-        public ChannelManager()
+        public ChannelManager(IAPIProvider api)
         {
+            this.api = api;
             CurrentChannel.ValueChanged += currentChannelChanged;
         }
 
@@ -133,7 +133,9 @@ namespace osu.Game.Online.Chat
 
         private void currentChannelChanged(ValueChangedEvent<Channel> e)
         {
-            if (!(e.NewValue is ChannelSelectorTabItem.ChannelSelectorTabChannel))
+            bool isSelectorChannel = e.NewValue is ChannelListing.ChannelListingChannel;
+
+            if (!isSelectorChannel)
                 JoinChannel(e.NewValue);
         }
 

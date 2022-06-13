@@ -8,6 +8,7 @@ using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Platform;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
@@ -17,7 +18,9 @@ using osu.Game.Database;
 using osu.Game.Extensions;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Online.Chat;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Mods;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu;
@@ -76,6 +79,37 @@ namespace osu.Game.Tests.Visual.SongSelect
             });
 
             AddStep("delete all beatmaps", () => manager?.Delete());
+        }
+
+        [Test]
+        public void TestPlaceholderBeatmapPresence()
+        {
+            createSongSelect();
+
+            AddUntilStep("wait for placeholder visible", () => getPlaceholder()?.State.Value == Visibility.Visible);
+
+            addRulesetImportStep(0);
+            AddUntilStep("wait for placeholder hidden", () => getPlaceholder()?.State.Value == Visibility.Hidden);
+
+            AddStep("delete all beatmaps", () => manager?.Delete());
+            AddUntilStep("wait for placeholder visible", () => getPlaceholder()?.State.Value == Visibility.Visible);
+        }
+
+        [Test]
+        public void TestPlaceholderConvertSetting()
+        {
+            changeRuleset(2);
+            addRulesetImportStep(0);
+            AddStep("change convert setting", () => config.SetValue(OsuSetting.ShowConvertedBeatmaps, false));
+
+            createSongSelect();
+
+            AddUntilStep("wait for placeholder visible", () => getPlaceholder()?.State.Value == Visibility.Visible);
+
+            AddStep("click link in placeholder", () => getPlaceholder().ChildrenOfType<DrawableLinkCompiler>().First().TriggerClick());
+
+            AddUntilStep("convert setting changed", () => config.Get<bool>(OsuSetting.ShowConvertedBeatmaps));
+            AddUntilStep("wait for placeholder visible", () => getPlaceholder()?.State.Value == Visibility.Hidden);
         }
 
         [Test]
@@ -918,6 +952,19 @@ namespace osu.Game.Tests.Visual.SongSelect
             AddAssert("check ruleset is correct for score", () => Ruleset.Value.OnlineID == 0);
         }
 
+        [Test]
+        public void TestModOverlayToggling()
+        {
+            changeRuleset(0);
+            createSongSelect();
+
+            AddStep("toggle mod overlay on", () => InputManager.Key(Key.F1));
+            AddUntilStep("mod overlay shown", () => songSelect.ModSelect.State.Value == Visibility.Visible);
+
+            AddStep("toggle mod overlay off", () => InputManager.Key(Key.F1));
+            AddUntilStep("mod overlay hidden", () => songSelect.ModSelect.State.Value == Visibility.Hidden);
+        }
+
         private void waitForInitialSelection()
         {
             AddUntilStep("wait for initial selection", () => !Beatmap.IsDefault);
@@ -925,6 +972,8 @@ namespace osu.Game.Tests.Visual.SongSelect
         }
 
         private int getBeatmapIndex(BeatmapSetInfo set, BeatmapInfo info) => set.Beatmaps.IndexOf(info);
+
+        private NoResultsPlaceholder getPlaceholder() => songSelect.ChildrenOfType<NoResultsPlaceholder>().FirstOrDefault();
 
         private int getCurrentBeatmapIndex() => getBeatmapIndex(songSelect.Carousel.SelectedBeatmapSet, songSelect.Carousel.SelectedBeatmapInfo);
 
@@ -993,6 +1042,7 @@ namespace osu.Game.Tests.Visual.SongSelect
             public WorkingBeatmap CurrentBeatmap => Beatmap.Value;
             public IWorkingBeatmap CurrentBeatmapDetailsBeatmap => BeatmapDetails.Beatmap;
             public new BeatmapCarousel Carousel => base.Carousel;
+            public new ModSelectOverlay ModSelect => base.ModSelect;
 
             public new void PresentScore(ScoreInfo score) => base.PresentScore(score);
 

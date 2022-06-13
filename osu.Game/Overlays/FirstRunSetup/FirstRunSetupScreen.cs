@@ -1,10 +1,14 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Screens;
+using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.Sprites;
 using osuTK;
 
 namespace osu.Game.Overlays.FirstRunSetup
@@ -15,19 +19,48 @@ namespace osu.Game.Overlays.FirstRunSetup
 
         protected FillFlowContainer Content { get; private set; }
 
-        protected FirstRunSetupScreen()
+        protected const float CONTENT_FONT_SIZE = 16;
+
+        protected const float CONTENT_PADDING = 30;
+
+        protected const float HEADER_FONT_SIZE = 24;
+
+        [Resolved]
+        protected OverlayColourProvider OverlayColourProvider { get; private set; }
+
+        [BackgroundDependencyLoader]
+        private void load()
         {
+            const float spacing = 20;
+
             InternalChildren = new Drawable[]
             {
                 new OsuScrollContainer(Direction.Vertical)
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Child = Content = new FillFlowContainer
+                    Masking = false,
+                    Child = new Container
                     {
-                        Spacing = new Vector2(20),
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
-                        Direction = FillDirection.Vertical,
+                        Padding = new MarginPadding { Horizontal = CONTENT_PADDING },
+                        Children = new Drawable[]
+                        {
+                            new OsuSpriteText
+                            {
+                                Text = this.GetLocalisableDescription(),
+                                Font = OsuFont.TorusAlternate.With(size: HEADER_FONT_SIZE),
+                                Colour = OverlayColourProvider.Light1,
+                            },
+                            Content = new FillFlowContainer
+                            {
+                                Y = HEADER_FONT_SIZE + spacing,
+                                Spacing = new Vector2(spacing),
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                            }
+                        },
                     },
                 }
             };
@@ -37,7 +70,7 @@ namespace osu.Game.Overlays.FirstRunSetup
         {
             base.OnEntering(e);
             this
-                .FadeInFromZero(500)
+                .FadeInFromZero(100)
                 .MoveToX(offset)
                 .MoveToX(0, 500, Easing.OutQuint);
         }
@@ -46,7 +79,7 @@ namespace osu.Game.Overlays.FirstRunSetup
         {
             base.OnResuming(e);
             this
-                .FadeInFromZero(500)
+                .FadeInFromZero(100)
                 .MoveToX(0, 500, Easing.OutQuint);
         }
 

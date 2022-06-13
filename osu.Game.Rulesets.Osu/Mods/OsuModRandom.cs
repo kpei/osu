@@ -22,6 +22,8 @@ namespace osu.Game.Rulesets.Osu.Mods
     {
         public override string Description => "It never gets boring!";
 
+        public override Type[] IncompatibleMods => base.IncompatibleMods.Append(typeof(OsuModTarget)).ToArray();
+
         private static readonly float playfield_diagonal = OsuPlayfield.BASE_SIZE.LengthFast;
 
         private Random? rng;
@@ -48,7 +50,7 @@ namespace osu.Game.Rulesets.Osu.Mods
 
                 if (positionInfo == positionInfos.First())
                 {
-                    positionInfo.DistanceFromPrevious = (float)(rng.NextDouble() * OsuPlayfield.BASE_SIZE.X / 2);
+                    positionInfo.DistanceFromPrevious = (float)(rng.NextDouble() * OsuPlayfield.BASE_SIZE.Y / 2);
                     positionInfo.RelativeAngle = (float)(rng.NextDouble() * 2 * Math.PI - Math.PI);
                 }
                 else

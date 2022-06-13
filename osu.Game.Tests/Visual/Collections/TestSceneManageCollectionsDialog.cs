@@ -142,18 +142,17 @@ namespace osu.Game.Tests.Visual.Collections
             AddStep("add dropdown", () =>
             {
                 Add(new CollectionFilterDropdown
-                    {
-                        Anchor = Anchor.TopRight,
-                        Origin = Anchor.TopRight,
-                        RelativeSizeAxes = Axes.X,
-                        Width = 0.4f,
-                    }
-                );
+                {
+                    Anchor = Anchor.TopRight,
+                    Origin = Anchor.TopRight,
+                    RelativeSizeAxes = Axes.X,
+                    Width = 0.4f,
+                });
             });
             AddStep("add two collections with same name", () => manager.Collections.AddRange(new[]
             {
                 new BeatmapCollection { Name = { Value = "1" } },
-                new BeatmapCollection { Name = { Value = "1" }, Beatmaps = { beatmapManager.GetAllUsableBeatmapSets().First().Beatmaps[0] } },
+                new BeatmapCollection { Name = { Value = "1" }, BeatmapHashes = { beatmapManager.GetAllUsableBeatmapSets().First().Beatmaps[0].MD5Hash } },
             }));
         }
 
@@ -163,7 +162,7 @@ namespace osu.Game.Tests.Visual.Collections
             AddStep("add two collections", () => manager.Collections.AddRange(new[]
             {
                 new BeatmapCollection { Name = { Value = "1" } },
-                new BeatmapCollection { Name = { Value = "2" }, Beatmaps = { beatmapManager.GetAllUsableBeatmapSets().First().Beatmaps[0] } },
+                new BeatmapCollection { Name = { Value = "2" }, BeatmapHashes = { beatmapManager.GetAllUsableBeatmapSets().First().Beatmaps[0].MD5Hash } },
             }));
 
             assertCollectionCount(2);
@@ -199,7 +198,7 @@ namespace osu.Game.Tests.Visual.Collections
         {
             AddStep("add two collections", () => manager.Collections.AddRange(new[]
             {
-                new BeatmapCollection { Name = { Value = "1" }, Beatmaps = { beatmapManager.GetAllUsableBeatmapSets().First().Beatmaps[0] } },
+                new BeatmapCollection { Name = { Value = "1" }, BeatmapHashes = { beatmapManager.GetAllUsableBeatmapSets().First().Beatmaps[0].MD5Hash } },
             }));
 
             assertCollectionCount(1);
