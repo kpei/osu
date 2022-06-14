@@ -45,16 +45,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             const double multiplier = 1.0; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
             double aimValue = computeAimValue(score, osuAttributes);
-            double coordinationValue = computeCoordinationValue(score, osuAttributes);
             double speedValue = computeSpeedValue(score, osuAttributes);
             double accuracyValue = computeAccuracyValue(score, osuAttributes);
             double flashlightValue = computeFlashlightValue(score, osuAttributes);
-            double totalValue = multiplier * (aimValue + coordinationValue + speedValue + accuracyValue + flashlightValue);
+            double totalValue = multiplier * (aimValue + speedValue + accuracyValue + flashlightValue);
 
             return new OsuPerformanceAttributes
             {
                 Aim = aimValue,
-                Coordination = coordinationValue,
                 Speed = speedValue,
                 Accuracy = accuracyValue,
                 Flashlight = flashlightValue,
@@ -106,51 +104,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             aimValue *= deviationScaling;
 
             return aimValue;
-        }
-
-        private double computeCoordinationValue(ScoreInfo score, OsuDifficultyAttributes attributes)
-        {
-            double coordinationDifficulty = attributes.CoordinationDifficulty;
-
-            if (totalSuccessfulHits == 0)
-                return 0;
-
-            // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
-            if (effectiveMissCount > 0)
-            {
-                double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
-                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + effectiveMissCount, fc_probability_threshold);
-                double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
-                coordinationDifficulty *= missPenalty;
-            }
-
-            double coordinationValue = Math.Pow(coordinationDifficulty, 3);
-
-            // Temporarily handling of slider-only maps:
-            if (attributes.HitCircleCount - countMiss == 0)
-                return coordinationValue;
-
-            double? deviation = calculateDeviation(attributes);
-
-            switch (deviation)
-            {
-                case null:
-                    return coordinationValue;
-
-                case double.PositiveInfinity:
-                    return 0;
-            }
-
-            if (score.Mods.Any(h => h is OsuModHidden))
-            {
-                // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
-                coordinationValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
-            }
-
-            double deviationScaling = SpecialFunctions.Erf(20 / (Math.Sqrt(2) * (double)deviation));
-            coordinationValue *= deviationScaling;
-
-            return coordinationValue;
         }
 
         private double computeSpeedValue(ScoreInfo score, OsuDifficultyAttributes attributes)
