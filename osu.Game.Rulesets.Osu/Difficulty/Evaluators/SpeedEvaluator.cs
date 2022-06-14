@@ -11,7 +11,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
     public static class SpeedEvaluator
     {
-        private const double single_spacing_threshold = 125;
         private const double min_speed_bonus = 75; // ~200BPM
         private const double speed_balancing_factor = 40;
 
@@ -50,10 +49,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             if (strainTime < min_speed_bonus)
                 speedBonus = 1 + 0.75 * Math.Pow((min_speed_bonus - strainTime) / speed_balancing_factor, 2);
 
-            double travelDistance = osuPrevObj?.TravelDistance ?? 0;
-            double distance = Math.Min(single_spacing_threshold, travelDistance + osuCurrObj.MinimumJumpDistance);
-
-            return (speedBonus + speedBonus * Math.Pow(distance / single_spacing_threshold, 3.5)) / strainTime;
+            return speedBonus / strainTime;
         }
     }
 }
