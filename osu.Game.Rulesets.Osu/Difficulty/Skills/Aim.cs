@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics;
-using MathNet.Numerics.RootFinding;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
@@ -24,7 +23,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         private readonly List<double> aimDifficulties = new List<double>();
-        private const double fc_probability_threshold = 1 / 2.0;
 
         /// <summary>
         /// Calculates the probability of hitting an object with a certain difficulty and skill level.
@@ -50,49 +48,58 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         /// <summary>
-        /// Calculates the probability of FC'ing a map given a skill level and a list of difficulties.
+        /// Calculates the probability of FC'ing the map given a skill level.
         /// </summary>
         /// <param name="skill">
         /// The player's skill level.
         /// </param>
-        /// <param name="difficulties">
-        /// List of difficulties to iterate through.
-        /// </param>
         /// <returns>
         /// The probability of FC'ing a map.
         /// </returns>
-        private double getFcProbability(double skill, IEnumerable<double> difficulties)
+        private double getFcProbability(double skill)
         {
-            return difficulties.Aggregate<double, double>(1, (current, difficulty) => current * hitProbabilityOf(difficulty, skill));
+            return aimDifficulties.Aggregate<double, double>(1, (current, difficulty) => current * hitProbabilityOf(difficulty, skill));
         }
 
         /// <summary>
-        /// We want to find the skill level such that the probability of FC'ing a map is equal to <see cref="fc_probability_threshold"/>.
-        /// Create a function that calculates the probability of FC'ing given a skill level and subtracts <see cref="fc_probability_threshold"/>.
-        /// The root of this function is the skill level where the probability of FC'ing the map is <see cref="fc_probability_threshold"/>.
-        /// This skill level is defined as the difficulty of the map.
+        /// Consider the inverse function of <see cref="getFcProbability"/>. Such a function would take an FC probability as an input
+        /// and return the skill level associated with that FC probability. Integrating the inverse from 0 to 1 gives the average
+        /// skill level across all probabilities. One can then show that the value of this integral is equivalent to the integral
+        /// from 0 to infinity of (1 - <see cref="getFcProbability"/>).
         /// </summary>
         /// <returns>
-        /// The skill level such that the probability of FC'ing the map is <see cref="fc_probability_threshold"/>.
+        /// The mean skill level needed to FC the map.
         /// </returns>
         private double getAimSkillLevel()
         {
-            double maxDifficulty = aimDifficulties.Max();
-            double fcProbabilityMinusThreshold(double skill) => getFcProbability(skill, aimDifficulties) - fc_probability_threshold;
-
-            // The lower bound must be the skill level such that the probability of hitting the hardest note is fc_probability_threshold.
-            double lowerBound = SpecialFunctions.ErfInv(fc_probability_threshold) * maxDifficulty * Math.Sqrt(2);
-
-            // The upper bound must be the skill level such that the probability of hitting every note in the map,
-            // assuming each note's difficulty is the same as the difficulty of the hardest note, is fc_probability_threshold.
-            double upperBound = SpecialFunctions.ErfInv(Math.Pow(fc_probability_threshold, 1.0 / aimDifficulties.Count)) * maxDifficulty * Math.Sqrt(2);
-
             try
             {
-                double skillLevel = Brent.FindRoot(fcProbabilityMinusThreshold, lowerBound, upperBound);
+                double getNonFcProbability(double skill) => 1 - getFcProbability(skill);
+                double skillLevel = 0;
+
+                // MathNet does not support improper integrals, so we will iteratively evaluate the integral from i to i + 1,
+                // starting at i = 0, until the integral's value is smaller than tolerance, at which point the loop will break.
+
+                const double tolerance = 1e-6;
+                int i = 0;
+
+                while (true)
+                {
+                    double integral = Integrate.OnClosedInterval(getNonFcProbability, i, i + 1);
+
+                    if (integral < tolerance)
+                    {
+                        skillLevel += integral;
+                        break;
+                    }
+
+                    skillLevel += integral;
+                    i++;
+                }
+
                 return skillLevel;
             }
-            catch (NonConvergenceException)
+            catch
             {
                 return 0;
             }
