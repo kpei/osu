@@ -16,7 +16,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
     public struct AimDifficultyAttributes {
         public double mu;
         public double sigma;
-        public double[] coefs;
+        public double v;
 
     }
 
@@ -95,13 +95,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 {
                     double integral = Integrate.OnClosedInterval(getNonFcProbability, i, i + 1);
 
-                    if (integral < tolerance)
-                    {
-                        skillLevel += integral;
-                        break;
-                    }
-
                     skillLevel += integral;
+                    if (integral < tolerance) break;
                     i++;
                 }
 
@@ -129,13 +124,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         }
 
         public AimDifficultyAttributes getDifficultyAttributes(double skillLevel) {
-            double[] missProbabilities = aimDifficulties.Select(d => 1 - hitProbabilityOf(d, skillLevel)).ToArray();
+            IList<double> hitProbabilities = aimDifficulties.Select(d => hitProbabilityOf(d, skillLevel)).ToList();
 
-            MissProbability missProbabilityCalculator = new MissProbability(missProbabilities);
+            MissProbability missProbabilityCalculator = new MissProbability(hitProbabilities);
             return new AimDifficultyAttributes() {
                 mu = missProbabilityCalculator.mu,
                 sigma = missProbabilityCalculator.sigma,
-                coefs = missProbabilityCalculator.coefs,
+                v = missProbabilityCalculator.v,
             };
         }
     }
