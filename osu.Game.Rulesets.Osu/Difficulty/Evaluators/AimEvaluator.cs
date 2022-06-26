@@ -129,16 +129,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// </returns>
         private static double positionFunction(double distance, double deltaTime, double initialVelocity, double finalVelocity, double t)
         {
-            return 6 * distance * Math.Pow(t, 5) / Math.Pow(deltaTime, 5) -
-                   15 * distance * Math.Pow(t, 4) / Math.Pow(deltaTime, 4) +
-                   10 * distance * Math.Pow(t, 3) / Math.Pow(deltaTime, 3) -
-                   3 * finalVelocity * Math.Pow(t, 5) / Math.Pow(deltaTime, 4) +
-                   7 * finalVelocity * Math.Pow(t, 4) / Math.Pow(deltaTime, 3) -
-                   4 * finalVelocity * Math.Pow(t, 3) / Math.Pow(deltaTime, 2) -
-                   3 * initialVelocity * Math.Pow(t, 5) / Math.Pow(deltaTime, 4) +
-                   8 * initialVelocity * Math.Pow(t, 4) / Math.Pow(deltaTime, 3) -
-                   6 * initialVelocity * Math.Pow(t, 3) / Math.Pow(deltaTime, 2) +
-                   initialVelocity * t;
+            double c1 = (10 * distance - deltaTime * (4 * finalVelocity + 6 * initialVelocity)) / Math.Pow(deltaTime, 3);
+            double c2 = (15 * distance - deltaTime * (7 * finalVelocity + 8 * initialVelocity)) / Math.Pow(deltaTime, 4);
+            double c3 = (6 * distance - deltaTime * (3 * finalVelocity + 3 * initialVelocity)) / Math.Pow(deltaTime, 5);
+            return initialVelocity * t + c1 * t * t * t - c2 * t * t * t * t + c3 * t * t * t * t * t;
         }
     }
 }
