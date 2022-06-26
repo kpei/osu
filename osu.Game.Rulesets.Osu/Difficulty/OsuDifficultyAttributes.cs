@@ -19,8 +19,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("aim_difficulty")]
         public double AimDifficulty { get; set; }
 
-        [JsonProperty("aim_difficulty_attributes")]
-        public AimDifficultyAttributes AimDifficultyAttributes { get; set; }
+        [JsonProperty("aim_difficulty_attribute_mu")]
+        public double AimDifficultyAttributeMu { get; set; }
+
+        [JsonProperty("aim_difficulty_attribute_sigma")]
+        public double AimDifficultyAttributeSigma { get; set; }
+
+        [JsonProperty("aim_difficulty_attribute_v")]
+        public double AimDifficultyAttributeV { get; set; }
 
         /// <summary>
         /// The difficulty corresponding to the speed skill.
@@ -96,6 +102,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 yield return (ATTRIB_ID_FLASHLIGHT, FlashlightDifficulty);
 
             yield return (ATTRIB_ID_SLIDER_FACTOR, SliderFactor);
+            yield return (ATTRIB_ID_AIM_DIFFICULTY_ATTRIB_MU, AimDifficultyAttributeMu);
+            yield return (ATTRIB_ID_AIM_DIFFICULTY_ATTRIB_SIGMA, AimDifficultyAttributeSigma);
+            yield return (ATTRIB_ID_AIM_DIFFICULTY_ATTRIB_V, AimDifficultyAttributeV);
         }
 
         public override void FromDatabaseAttributes(IReadOnlyDictionary<int, double> values)
@@ -110,6 +119,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             StarRating = values[ATTRIB_ID_DIFFICULTY];
             FlashlightDifficulty = values.GetValueOrDefault(ATTRIB_ID_FLASHLIGHT);
             SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
+            AimDifficultyAttributeMu = values[ATTRIB_ID_AIM_DIFFICULTY_ATTRIB_MU];
+            AimDifficultyAttributeSigma = values[ATTRIB_ID_AIM_DIFFICULTY_ATTRIB_SIGMA];
+            AimDifficultyAttributeV = values[ATTRIB_ID_AIM_DIFFICULTY_ATTRIB_V];
         }
 
         #region Newtonsoft.Json implicit ShouldSerialize() methods
