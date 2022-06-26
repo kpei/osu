@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Newtonsoft.Json;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty.Skills;
 
 namespace osu.Game.Rulesets.Osu.Difficulty
 {
@@ -17,6 +18,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         /// </summary>
         [JsonProperty("aim_difficulty")]
         public double AimDifficulty { get; set; }
+
+        [JsonProperty("aim_difficulty_attributes")]
+        public AimDifficultyAttributes AimDifficultyAttributes { get; set; }
 
         /// <summary>
         /// The difficulty corresponding to the speed skill.

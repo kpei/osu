@@ -12,6 +12,14 @@ using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
+
+    public struct AimDifficultyAttributes {
+        public double mu;
+        public double sigma;
+        public double[] coefs;
+
+    }
+
     /// <summary>
     /// Represents the skill required to correctly aim at every object in the map with a uniform CircleSize and normalized distances.
     /// </summary>
@@ -118,6 +126,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double aimSkillLevel = getAimSkillLevel();
             return aimSkillLevel;
+        }
+
+        public AimDifficultyAttributes getDifficultyAttributes(double skillLevel) {
+            double[] missProbabilities = aimDifficulties.Select(d => 1 - hitProbabilityOf(d, skillLevel)).ToArray();
+
+            MissProbability missProbabilityCalculator = new MissProbability(missProbabilities);
+            return new AimDifficultyAttributes() {
+                mu = missProbabilityCalculator.mu,
+                sigma = missProbabilityCalculator.sigma,
+                coefs = missProbabilityCalculator.coefs,
+            };
         }
     }
 }

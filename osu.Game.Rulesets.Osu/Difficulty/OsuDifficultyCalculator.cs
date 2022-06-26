@@ -37,9 +37,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (beatmap.HitObjects.Count == 0)
                 return new OsuDifficultyAttributes { Mods = mods };
 
-            double aimRating = Math.Pow(skills[0].DifficultyValue(), aim_exp) * aim_scaling;
+            double aimDifficultyValue = skills[0].DifficultyValue();
+            double aimRating = Math.Pow(aimDifficultyValue, aim_exp) * aim_scaling;
             double speedRating = Math.Pow(skills[1].DifficultyValue(), tap_exp) * tap_scaling;
             double flashlightRating = Math.Sqrt(skills[2].DifficultyValue()) * 0.0675;
+
+            AimDifficultyAttributes aimDifficultyAttributes = ((Aim)skills[0]).getDifficultyAttributes(aimDifficultyValue);
 
             if (mods.Any(h => h is OsuModRelax))
                 speedRating = 0.0;
@@ -59,6 +62,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 StarRating = starRating,
                 Mods = mods,
                 AimDifficulty = aimRating,
+                AimDifficultyAttributes = aimDifficultyAttributes,
                 SpeedDifficulty = speedRating,
                 FlashlightDifficulty = flashlightRating,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
