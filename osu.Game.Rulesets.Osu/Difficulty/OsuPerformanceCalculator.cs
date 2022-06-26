@@ -61,6 +61,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             };
         }
 
+        private double computeAimMissPenaltyAlternate() {
+            double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
+            double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + effectiveMissCount, fc_probability_threshold);
+            double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
+            return missPenalty;
+        }
+
+        private double computeAimMissPenalty(double aimDifficultyMu, double aimDifficultySigma, double aimDifficultyV) {
+            if (aimDifficultySigma <= 0) throw new Exception("Aim difficulty attributes are misdefined.");
+            MissProbability missProbabilityCalculator = new MissProbability(aimDifficultyMu, aimDifficultySigma, aimDifficultyV);
+            double missProbability = missProbabilityCalculator.chanceOf(misses: effectiveMissCount);
+            double fcProbability = missProbabilityCalculator.chanceOfAtMost(misses: 0);
+            return missProbability / fcProbability;
+        }
+
         private double computeAimValue(ScoreInfo score, OsuDifficultyAttributes attributes)
         {
             double aimDifficulty = attributes.AimDifficulty;
@@ -71,10 +86,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
             if (effectiveMissCount > 0)
             {
-                double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
-                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + effectiveMissCount, fc_probability_threshold);
-                double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
-                aimDifficulty *= missPenalty;
+                try {
+                    aimDifficulty *= computeAimMissPenalty(attributes.AimDifficultyAttributeMu, attributes.AimDifficultyAttributeSigma, attributes.AimDifficultyAttributeV);
+                } catch {
+                    aimDifficulty *= computeAimMissPenaltyAlternate();
+                }
             }
 
             double aimValue = Math.Pow(aimDifficulty, 3);
