@@ -13,8 +13,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public readonly double sigma;
         public readonly double v;
 
-        public MissProbability(double mu, double sigma, double[] coefs) {
-
+        public MissProbability(double mu, double sigma, double v) {
+            this.mu = mu;
+            this.sigma = sigma;
+            this.v = v;
         }
         public MissProbability(IList<double> hitProbabilities)
         {
