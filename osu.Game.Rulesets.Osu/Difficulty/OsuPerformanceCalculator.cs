@@ -72,8 +72,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (aimDifficultySigma <= 0) throw new Exception("Aim difficulty attributes are misdefined.");
             MissProbability missProbabilityCalculator = new MissProbability(aimDifficultyMu, aimDifficultySigma, aimDifficultyV);
             double missProbability = missProbabilityCalculator.chanceOf(misses: effectiveMissCount);
-            double fcProbability = missProbabilityCalculator.chanceOfAtMost(misses: 0);
-            return missProbability / fcProbability;
+            double totalProbability = missProbabilityCalculator.chanceOfAtMost(misses: effectiveMissCount);
+            return missProbability / totalProbability;
         }
 
         private double computeAimValue(ScoreInfo score, OsuDifficultyAttributes attributes)
