@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -870,10 +872,10 @@ namespace osu.Game.Tests.Visual.SongSelect
                 return set != null;
             });
 
-            FilterableGroupedDifficultyIcon groupIcon = null;
+            GroupedDifficultyIcon groupIcon = null;
             AddUntilStep("Find group icon for different ruleset", () =>
             {
-                return (groupIcon = set.ChildrenOfType<FilterableGroupedDifficultyIcon>()
+                return (groupIcon = set.ChildrenOfType<GroupedDifficultyIcon>()
                                        .FirstOrDefault(icon => icon.Items.First().BeatmapInfo.Ruleset.OnlineID == 3)) != null;
             });
 

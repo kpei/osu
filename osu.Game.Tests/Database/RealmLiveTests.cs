@@ -12,8 +12,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Database;
 using Realms;
 
-#nullable enable
-
 namespace osu.Game.Tests.Database
 {
     public class RealmLiveTests : RealmTest
@@ -191,7 +189,7 @@ namespace osu.Game.Tests.Database
                     });
 
                     // Can't be used, even from within a valid context.
-                    realm.Run(threadContext =>
+                    realm.Run(_ =>
                     {
                         Assert.Throws<InvalidOperationException>(() =>
                         {

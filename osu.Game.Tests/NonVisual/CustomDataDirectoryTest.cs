@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.IO;
 using System.Linq;
@@ -252,7 +254,7 @@ namespace osu.Game.Tests.NonVisual
                     Assert.That(File.Exists(Path.Combine(customPath, OsuGameBase.CLIENT_DATABASE_FILENAME)));
 
                     Directory.CreateDirectory(customPath2);
-                    File.Copy(Path.Combine(customPath, OsuGameBase.CLIENT_DATABASE_FILENAME), Path.Combine(customPath2, OsuGameBase.CLIENT_DATABASE_FILENAME));
+                    File.WriteAllText(Path.Combine(customPath2, OsuGameBase.CLIENT_DATABASE_FILENAME), "I am a text");
 
                     // Fails because file already exists.
                     Assert.Throws<ArgumentException>(() => osu.Migrate(customPath2));

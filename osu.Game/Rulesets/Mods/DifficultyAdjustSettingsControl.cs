@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -53,8 +55,8 @@ namespace osu.Game.Rulesets.Mods
         {
             base.LoadComplete();
 
-            Current.BindValueChanged(current => updateCurrentFromSlider());
-            beatmap.BindValueChanged(b => updateCurrentFromSlider(), true);
+            Current.BindValueChanged(_ => updateCurrentFromSlider());
+            beatmap.BindValueChanged(_ => updateCurrentFromSlider(), true);
 
             sliderDisplayCurrent.BindValueChanged(number =>
             {

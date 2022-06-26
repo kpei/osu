@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -154,9 +156,9 @@ namespace osu.Game.Rulesets.Mania.Difficulty
             {
                 switch (m)
                 {
-                    case ManiaModNoFail _:
-                    case ManiaModEasy _:
-                    case ManiaModHalfTime _:
+                    case ManiaModNoFail:
+                    case ManiaModEasy:
+                    case ManiaModHalfTime:
                         scoreMultiplier *= 0.5;
                         break;
                 }

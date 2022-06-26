@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Localisation;
 
 namespace osu.Game.Localisation
@@ -103,6 +105,11 @@ namespace osu.Game.Localisation
         /// "Random selection algorithm"
         /// </summary>
         public static LocalisableString RandomSelectionAlgorithm => new TranslatableString(getKey(@"random_selection_algorithm"), @"Random selection algorithm");
+
+        /// <summary>
+        /// "Mod select hotkey style"
+        /// </summary>
+        public static LocalisableString ModSelectHotkeyStyle => new TranslatableString(getKey(@"mod_select_hotkey_style"), @"Mod select hotkey style");
 
         /// <summary>
         /// "no limit"

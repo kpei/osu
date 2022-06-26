@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -385,7 +387,7 @@ namespace osu.Game.Tests.Visual.UserInterface
             AddUntilStep("double time not visible", () => modSelectOverlay.ChildrenOfType<ModPanel>().Where(panel => panel.Mod is OsuModDoubleTime).All(panel => panel.Filtered.Value));
             AddAssert("nightcore still visible", () => modSelectOverlay.ChildrenOfType<ModPanel>().Where(panel => panel.Mod is OsuModNightcore).Any(panel => !panel.Filtered.Value));
 
-            AddStep("make double time valid again", () => modSelectOverlay.IsValidMod = m => true);
+            AddStep("make double time valid again", () => modSelectOverlay.IsValidMod = _ => true);
             AddUntilStep("double time visible", () => modSelectOverlay.ChildrenOfType<ModPanel>().Where(panel => panel.Mod is OsuModDoubleTime).Any(panel => !panel.Filtered.Value));
             AddAssert("nightcore still visible", () => modSelectOverlay.ChildrenOfType<ModPanel>().Where(b => b.Mod is OsuModNightcore).Any(panel => !panel.Filtered.Value));
         }

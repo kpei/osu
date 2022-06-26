@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -159,7 +161,7 @@ namespace osu.Game.Rulesets.Osu.Tests
             => addCheckPositionChangeSteps(timeAtRepeat(startTime, repeatIndex), positionAtRepeat(repeatIndex), positionRemainsSame);
 
         private Func<double> timeAtRepeat(Func<double> startTime, int repeatIndex) => () => startTime() + 100 + duration_of_span * repeatIndex;
-        private Func<Vector2> positionAtRepeat(int repeatIndex) => repeatIndex % 2 == 0 ? (Func<Vector2>)getSliderStart : getSliderEnd;
+        private Func<Vector2> positionAtRepeat(int repeatIndex) => repeatIndex % 2 == 0 ? getSliderStart : getSliderEnd;
 
         private List<Vector2> getSliderCurve() => ((PlaySliderBody)drawableSlider.Body.Drawable).CurrentCurve;
         private Vector2 getSliderStart() => getSliderCurve().First();
