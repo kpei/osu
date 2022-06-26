@@ -76,30 +76,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
         {
             try
             {
+                double maxDifficulty = aimDifficulties.Max();
                 double getNonFcProbability(double skill) => 1 - getFcProbability(skill);
-                double skillLevel = 0;
-
-                // MathNet does not support improper integrals, so we will iteratively evaluate the integral from i to i + 1,
-                // starting at i = 0, until the integral's value is smaller than tolerance, at which point the loop will break.
-
-                const double tolerance = 1e-6;
-                int i = 0;
-
-                while (true)
-                {
-                    double integral = Integrate.OnClosedInterval(getNonFcProbability, i, i + 1);
-
-                    if (integral < tolerance)
-                    {
-                        skillLevel += integral;
-                        break;
-                    }
-
-                    skillLevel += integral;
-                    i++;
-                }
-
-                return skillLevel;
+                double intervalEnd = 5 * maxDifficulty * Math.Sqrt(Math.Log(1 + aimDifficulties.Count));
+                return Integrate.OnClosedInterval(getNonFcProbability, 0, intervalEnd, 1e-4);
             }
             catch
             {
