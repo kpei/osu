@@ -214,20 +214,35 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double calculateEffectiveMissCount(OsuDifficultyAttributes attributes)
         {
-            // Guess the number of misses + slider breaks from combo
-            double comboBasedMissCount = 0.0;
+            // calculate the probabilistic expectation of number of misses + slider breaks
+            double expectedComboBasedMissCount = countMiss;
 
             if (attributes.SliderCount > 0)
             {
+                double minComboBasedMissCount = 0.0;
+
                 double fullComboThreshold = attributes.MaxCombo - 0.1 * attributes.SliderCount;
                 if (scoreMaxCombo < fullComboThreshold)
-                    comboBasedMissCount = fullComboThreshold / Math.Max(1.0, scoreMaxCombo);
+                    minComboBasedMissCount = fullComboThreshold / Math.Max(1.0, scoreMaxCombo);
+
+                // Clamp miss count since it's derived from combo and can be higher than total hits and that breaks some calculations
+                minComboBasedMissCount = Math.Clamp(minComboBasedMissCount, countMiss, totalHits);
+                expectedComboBasedMissCount = minComboBasedMissCount;
+
+                // Now get the maximum possible number of misses + slider breaks that can happen
+                double maxPossibleMissCount = Math.Min(attributes.SliderCount, countMiss + countMeh + countOk);
+                double maxComboBasedMissCount = Math.Min(Math.Max(fullComboThreshold - scoreMaxCombo, minComboBasedMissCount), maxPossibleMissCount);
+
+                // Calculate a miss probability based on player performance results
+                double missProbability = 1 - Beta.InvCDF(totalSuccessfulHits, 1 + minComboBasedMissCount, 0.5);
+                double getProbabilityWeightedMisses(double misses) => misses * Normal.PDF(totalHits * missProbability, Math.Sqrt(totalHits * missProbability * (1 - missProbability)), misses);
+                double sliderFactor = attributes.SliderCount / (double) totalHits;
+                
+                // Calculate expected combo breaks given that it is known they have already broken minComboBasedMissCount number of times.
+                expectedComboBasedMissCount += sliderFactor * Integrate.OnClosedInterval(getProbabilityWeightedMisses, minComboBasedMissCount, maxComboBasedMissCount, 1e-4);
             }
 
-            // Clamp miss count since it's derived from combo and can be higher than total hits and that breaks some calculations
-            comboBasedMissCount = Math.Min(comboBasedMissCount, totalHits);
-
-            return Math.Max(countMiss, comboBasedMissCount);
+            return expectedComboBasedMissCount;
         }
 
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
