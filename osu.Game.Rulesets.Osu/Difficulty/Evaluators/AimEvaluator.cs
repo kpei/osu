@@ -13,6 +13,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
     public static class AimEvaluator
     {
+        /// <summary>
+        /// Evaluates the difficulty of aiming the current object.
+        /// </summary>
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
         {
             var osuCurrObj = (OsuDifficultyHitObject)current;
@@ -60,24 +63,24 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             double timeInCurrentNote = 0;
 
             // Determine the position function from the previous note to the current note.
-            // Determine when the position function equals LazyJumpDistance - 1, which is the time that the player enters the note.
+            // Then, determine when the position function equals LazyJumpDistance - 1, which is the time that the player enters the note.
             // If this number is subtracted from DeltaTime, we get the amount of time the cursor is in the note as it moves from the previous note to the current note.
             // This time is equivalent to finding when the position function equals 1.
 
             if (osuCurrObj.LazyJumpDistance > 1)
             {
                 double currentPositionFunctionMinusOne(double time) => positionFunction(osuCurrObj.LazyJumpDistance, osuCurrObj.StrainTime, 0, 0, time) - 1;
-                double timeEnterNote = Brent.FindRoot(currentPositionFunctionMinusOne, 1e-6, osuCurrObj.StrainTime, 1e-4);
+                double timeEnterNote = Brent.FindRoot(currentPositionFunctionMinusOne, 0, osuCurrObj.StrainTime, 1e-4);
                 timeInCurrentNote += timeEnterNote;
             }
             else
             {
-                // If the current and previous objects are overlapped by 50% of more, just add the DeltaTime of the current object.
+                // If the current and previous objects are overlapped by 50% or more, just add the DeltaTime of the current object.
                 timeInCurrentNote += osuCurrObj.StrainTime;
             }
 
-            // We also need to take into account that fact that the player leaves the current note as well.
-            // As the player leaves the current note and moves to the next note, the player spends time in the current note as well.
+            // As the player leaves the current note and moves on to the next note, the player spends some time in the current note as well.
+            // We should therefore take into account this amount of time.
             // This time is calculated and added to the amount of time spent in the current note.
 
             if (osuNextObj != null)
@@ -85,7 +88,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                 if (osuNextObj.LazyJumpDistance > 1)
                 {
                     double nextPositionFunctionMinusOne(double time) => positionFunction(osuNextObj.LazyJumpDistance, osuNextObj.StrainTime, 0, 0, time) - 1;
-                    double timeExitNote = Brent.FindRoot(nextPositionFunctionMinusOne, 1e-6, osuNextObj.StrainTime, 1e-4);
+                    double timeExitNote = Brent.FindRoot(nextPositionFunctionMinusOne, 0, osuNextObj.StrainTime, 1e-4);
                     timeInCurrentNote += timeExitNote;
                 }
                 else
