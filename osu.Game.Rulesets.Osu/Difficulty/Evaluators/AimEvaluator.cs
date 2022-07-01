@@ -28,7 +28,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         }
 
         /// <summary>
-        /// Calculates the aim difficulty of the current object for a player with an aim deviation of 1.
+        /// Calculates the aim difficulty of the current object for a player with an aim skill of 1.
         /// </summary>
         /// <param name="current">
         /// The current object.
@@ -68,8 +68,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 
             if (osuCurrObj.LazyJumpDistance > 1)
             {
-                double currentPositionFunctionMinusOne(double time) => positionFunction(osuCurrObj.LazyJumpDistance, osuCurrObj.StrainTime, 0, 0, time) - (osuCurrObj.LazyJumpDistance - 1);
-                double timeSpentInNoteWhileEntering = osuCurrObj.StrainTime - Brent.FindRoot(currentPositionFunctionMinusOne, 0, osuCurrObj.StrainTime, 1e-4);
+                double currentPositionFunctionWithRoot(double time) => positionFunction(osuCurrObj.LazyJumpDistance, osuCurrObj.StrainTime, 0, 0, time) - (osuCurrObj.LazyJumpDistance - 1);
+                double timeSpentInNoteWhileEntering = osuCurrObj.StrainTime - Brent.FindRoot(currentPositionFunctionWithRoot, 0, osuCurrObj.StrainTime, 1e-4);
                 timeInCurrentNote += timeSpentInNoteWhileEntering;
             }
             else
@@ -86,8 +86,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             {
                 if (osuNextObj.LazyJumpDistance > 1)
                 {
-                    double nextPositionFunctionMinusOne(double time) => positionFunction(osuNextObj.LazyJumpDistance, osuNextObj.StrainTime, 0, 0, time) - 1;
-                    double timeSpentInNoteWhileExiting = Brent.FindRoot(nextPositionFunctionMinusOne, 0, osuNextObj.StrainTime, 1e-4);
+                    double nextPositionFunctionWithRoot(double time) => positionFunction(osuNextObj.LazyJumpDistance, osuNextObj.StrainTime, 0, 0, time) - 1;
+                    double timeSpentInNoteWhileExiting = Brent.FindRoot(nextPositionFunctionWithRoot, 0, osuNextObj.StrainTime, 1e-4);
                     timeInCurrentNote += timeSpentInNoteWhileExiting;
                 }
                 else
