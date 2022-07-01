@@ -65,13 +65,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
             // Determine the position function from the previous note to the current note.
             // Then, determine when the position function equals LazyJumpDistance - 1, which is the time that the player enters the note.
             // If this number is subtracted from DeltaTime, we get the amount of time the cursor is in the note as it moves from the previous note to the current note.
-            // This time is equivalent to finding when the position function equals 1.
 
             if (osuCurrObj.LazyJumpDistance > 1)
             {
-                double currentPositionFunctionMinusOne(double time) => positionFunction(osuCurrObj.LazyJumpDistance, osuCurrObj.StrainTime, 0, 0, time) - 1;
-                double timeEnterNote = Brent.FindRoot(currentPositionFunctionMinusOne, 0, osuCurrObj.StrainTime, 1e-4);
-                timeInCurrentNote += timeEnterNote;
+                double currentPositionFunctionMinusOne(double time) => positionFunction(osuCurrObj.LazyJumpDistance, osuCurrObj.StrainTime, 0, 0, time) - (osuCurrObj.LazyJumpDistance - 1);
+                double timeSpentInNoteWhileEntering = osuCurrObj.StrainTime - Brent.FindRoot(currentPositionFunctionMinusOne, 0, osuCurrObj.StrainTime, 1e-4);
+                timeInCurrentNote += timeSpentInNoteWhileEntering;
             }
             else
             {
@@ -88,8 +87,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                 if (osuNextObj.LazyJumpDistance > 1)
                 {
                     double nextPositionFunctionMinusOne(double time) => positionFunction(osuNextObj.LazyJumpDistance, osuNextObj.StrainTime, 0, 0, time) - 1;
-                    double timeExitNote = Brent.FindRoot(nextPositionFunctionMinusOne, 0, osuNextObj.StrainTime, 1e-4);
-                    timeInCurrentNote += timeExitNote;
+                    double timeSpentInNoteWhileExiting = Brent.FindRoot(nextPositionFunctionMinusOne, 0, osuNextObj.StrainTime, 1e-4);
+                    timeInCurrentNote += timeSpentInNoteWhileExiting;
                 }
                 else
                 {
