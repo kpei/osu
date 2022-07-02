@@ -7,7 +7,6 @@ using System;
 using MathNet.Numerics.RootFinding;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Osu.Objects;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
@@ -18,10 +17,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// </summary>
         public static double EvaluateDifficultyOf(DifficultyHitObject current)
         {
-            var osuCurrObj = (OsuDifficultyHitObject)current;
-            if (osuCurrObj.BaseObject is Spinner)
-                return 0;
-
             double aimDifficulty = aimDifficultyOf(current);
             double coordinationDifficulty = coordinationDifficultyOf(current);
             return aimDifficulty + coordinationDifficulty;
@@ -56,9 +51,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         {
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuNextObj = (OsuDifficultyHitObject)current.Next(0);
-
-            if (osuCurrObj.BaseObject is Spinner)
-                return 0;
 
             double timeInCurrentNote = 0;
 

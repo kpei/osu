@@ -6,7 +6,6 @@
 using System;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
-using osu.Game.Rulesets.Osu.Objects;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
 {
@@ -25,9 +24,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// </summary>
         public static double EvaluateDifficultyOf(DifficultyHitObject current, double greatWindow)
         {
-            if (current.BaseObject is Spinner)
-                return 0;
-
             // derive strainTime for calculation
             var osuCurrObj = (OsuDifficultyHitObject)current;
             var osuNextObj = (OsuDifficultyHitObject)current.Next(0);
