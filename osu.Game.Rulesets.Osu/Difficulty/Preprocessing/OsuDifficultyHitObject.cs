@@ -22,6 +22,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         protected new OsuHitObject BaseObject => (OsuHitObject)base.BaseObject;
 
         /// <summary>
+        /// The X position of this <see cref="OsuDifficultyHitObject"/>, normalized with respect to the radius.
+        /// </summary>
+        public double NormalizedX { get; }
+
+        /// <summary>
+        /// The Y position of this <see cref="OsuDifficultyHitObject"/>, normalized with respect to the radius.
+        /// </summary>
+        public double NormalizedY { get; }
+
+        /// <summary>
         /// Milliseconds elapsed since the start time of the previous <see cref="OsuDifficultyHitObject"/>, with a minimum of 25ms.
         /// </summary>
         public readonly double StrainTime;
@@ -81,6 +91,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Preprocessing
         {
             this.lastLastObject = (OsuHitObject)lastLastObject;
             this.lastObject = (OsuHitObject)lastObject;
+
+            NormalizedX = ((OsuHitObject)hitObject).X * normalised_radius / BaseObject.Radius;
+            NormalizedY = ((OsuHitObject)hitObject).Y * normalised_radius / BaseObject.Radius;
 
             // Capped to 25ms to prevent difficulty calculation breaking from simultaneous objects.
             StrainTime = Math.Max(DeltaTime, min_delta_time);
