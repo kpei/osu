@@ -28,6 +28,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private const double tap_exp = 0.5;
 
         private double hitWindowGreat;
+        private double hitWindowMeh;
 
         public OsuDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
@@ -95,10 +96,11 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             hitWindows.SetDifficulty(beatmap.Difficulty.OverallDifficulty);
 
             hitWindowGreat = hitWindows.WindowFor(HitResult.Great) / clockRate;
+            hitWindowMeh = hitWindows.WindowFor(HitResult.Meh) / clockRate;
 
             return new Skill[]
             {
-                new Aim(mods),
+                new Aim(mods, hitWindowMeh),
                 new Speed(mods, hitWindowGreat),
                 new Flashlight(mods)
             };

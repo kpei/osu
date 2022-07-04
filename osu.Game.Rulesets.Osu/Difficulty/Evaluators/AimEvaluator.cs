@@ -18,10 +18,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// <summary>
         /// Evaluates the difficulty of successfully aiming at the current object.
         /// </summary>
-        public static double EvaluateDifficultyOf(DifficultyHitObject current)
+        public static double EvaluateDifficultyOf(DifficultyHitObject current, double mehHitWindow)
         {
             double aimDifficulty = aimDifficultyOf(current);
-            double coordinationDifficulty = coordinationDifficultyOf(current);
+            double coordinationDifficulty = coordinationDifficultyOf(current, mehHitWindow);
             return aimDifficulty + coordinationDifficulty;
         }
 
@@ -37,7 +37,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
         /// <summary>
         /// Calculates the coordination difficulty of the current object, defined as the reciprocal of half of the amount of time the player spends in the note.
         /// </summary>
-        private static double coordinationDifficultyOf(DifficultyHitObject current)
+        private static double coordinationDifficultyOf(DifficultyHitObject current, double mehHitWindow)
         {
             var osuPrevObj = (OsuDifficultyHitObject)current.Previous(0);
             var osuCurrObj = (OsuDifficultyHitObject)current;
@@ -71,6 +71,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     timeInNote += osuCurrObj.StrainTime - timeEnterNote;
                 }
             }
+            else
+            {
+                timeInNote += mehHitWindow;
+            }
 
             // Determine the amount of time the cursor is within the current circle as it moves toward the next circle.
             if (osuNextObj != null)
@@ -92,9 +96,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Evaluators
                     timeInNote += timeExitNote;
                 }
             }
-
-            if (timeInNote == 0)
-                return 0;
+            else
+            {
+                timeInNote += mehHitWindow;
+            }
 
             return 2 / timeInNote;
         }
