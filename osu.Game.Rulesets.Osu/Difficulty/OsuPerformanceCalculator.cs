@@ -73,10 +73,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
             if (effectiveMissCount > 0)
             {
-                double hitProbabilityIfFc = Math.Pow(fc_probability_threshold, 1 / (double)totalHits);
-                double hitProbability = Beta.InvCDF(totalSuccessfulHits, 1 + effectiveMissCount, fc_probability_threshold);
-                double missPenalty = SpecialFunctions.ErfInv(hitProbability) / SpecialFunctions.ErfInv(hitProbabilityIfFc);
-                aimDifficulty *= missPenalty;
+                // Since star rating is difficulty^0.829842642, we should raise the miss penalty to this power as well.
+                aimDifficulty *= Math.Pow(calculateMissPenalty(), 0.829842642);
             }
 
             double aimValue = Math.Pow(aimDifficulty, 3);
@@ -228,6 +226,41 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             comboBasedMissCount = Math.Min(comboBasedMissCount, totalHits);
 
             return Math.Max(countMiss, comboBasedMissCount);
+        }
+
+        /// <summary>
+        /// Imagine a map with n objects, where all objects have equal difficulty d.
+        /// d * sqrt(2) * s(n,0) will return the FC difficulty of that map.
+        /// d * sqrt(2) * s(n,m) will return the m-miss difficulty of that map.
+        /// Since we are given FC difficulty, for a score with m misses, we can obtain
+        /// the difficulty for m misses by multiplying the difficulty by s(n,m) / s(n,0).
+        /// Note that the term d * sqrt(2) gets canceled when taking the ratio.
+        /// </summary>
+        private double calculateMissPenalty()
+        {
+            int n = totalHits;
+
+            if (n == 0)
+                return 0;
+
+            double s(double m)
+            {
+                double y = SpecialFunctions.ErfInv((n - m) / (n + 1));
+                // Derivatives of ErfInv:
+                double y1 = Math.Exp(y * y) * Math.Sqrt(Math.PI) / 2;
+                double y2 = 2 * y * y1 * y1;
+                double y3 = 2 * y1 * (y * y2 + (2 * (y * y) + 1) * (y1 * y1));
+                double y4 = 2 * y1 * (y * y3 + (6 * (y * y) + 3) * y1 * y2 + (4 * (y * y * y) + 6 * y) * (y1 * y1 * y1));
+                // Central moments of Beta distribution:
+                double a = n - m;
+                double b = m + 1;
+                double u2 = a * b / ((a + b) * (a + b) * (a + b + 1));
+                double u3 = 2 * (b - a) * a * b / ((a + b + 2) * (a + b) * (a + b) * (a + b) * (a + b + 1));
+                double u4 = (3 + 6 * ((a - b) * (a + b + 1) - a * b * (a + b + 2)) / (a * b * (a + b + 2) * (a + b + 3))) * (u2 * u2);
+                return Math.Sqrt(2) * (y + 0.5 * y2 * u2 + 1 / 6.0 * y3 * u3 + 1 / 24.0 * y4 * u4);
+            }
+
+            return s(effectiveMissCount) / s(0);
         }
 
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
