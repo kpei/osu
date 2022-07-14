@@ -32,6 +32,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("estimated_speed_ur")]
         public double EstimatedSpeedUnstableRate { get; set; }
 
+        [JsonProperty("estimated_speed_skill")]
+        public double EstimatedSpeedSkill { get; set; }
+
         public override IEnumerable<PerformanceDisplayAttribute> GetAttributesForDisplay()
         {
             foreach (var attribute in base.GetAttributesForDisplay())

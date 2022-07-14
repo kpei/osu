@@ -85,7 +85,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 EffectiveMissCount = effectiveMissCount,
                 Total = totalValue,
                 EstimatedUnstableRate = 10 * estimatedDeviation,
-                EstimatedSpeedUnstableRate = 10 * estimatedSpeedDeviation
+                EstimatedSpeedUnstableRate = 10 * estimatedSpeedDeviation,
+                EstimatedSpeedSkill = estimatedSpeedSkill
             };
         }
 
@@ -186,8 +187,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (attributes.HitCircleCount == 0)
                 return 0;
 
-            double accuracyValue = 100 * Math.Pow(Math.Pow(estimatedSpeedSkill, 0.75) / 13, 2);
-            // double accuracyValue = 100 * Math.Pow(7.5 / estimatedDeviation, 2);
+            // double accuracyValue = estimatedSpeedSkill;
+            double accuracyValue = 100 * Math.Pow(7.5 / estimatedDeviation, 2);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
