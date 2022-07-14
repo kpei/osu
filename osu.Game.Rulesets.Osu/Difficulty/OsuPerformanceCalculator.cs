@@ -26,6 +26,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private double effectiveMissCount;
         private double estimatedDeviation;
         private double estimatedSpeedDeviation;
+        private double estimatedSpeedSkill;
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
@@ -45,6 +46,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             effectiveMissCount = calculateEffectiveMissCount(osuAttributes);
             estimatedDeviation = calculateDeviation(osuAttributes) ?? double.PositiveInfinity;
             estimatedSpeedDeviation = calculateSpeedDeviation(osuAttributes) ?? double.PositiveInfinity;
+            estimatedSpeedSkill = calculateSpeedSkill(estimatedDeviation, osuAttributes) ?? double.NegativeInfinity;
 
             double multiplier = 1.12; // This is being adjusted to keep the final pp value scaled around what it used to be when changing things.
 
@@ -171,19 +173,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedValue *= 1.0 + 0.04 * (12.0 - attributes.ApproachRate);
             }
 
-            // Calculate accuracy assuming the worst case scenario
-            double relevantTotalDiff = totalHits - attributes.SpeedNoteCount;
-            double relevantCountGreat = Math.Max(0, countGreat - relevantTotalDiff);
-            double relevantCountOk = Math.Max(0, countOk - Math.Max(0, relevantTotalDiff - countGreat));
-            double relevantCountMeh = Math.Max(0, countMeh - Math.Max(0, relevantTotalDiff - countGreat - countOk));
-            double relevantAccuracy = attributes.SpeedNoteCount == 0 ? 0 : (relevantCountGreat * 6.0 + relevantCountOk * 2.0 + relevantCountMeh) / (attributes.SpeedNoteCount * 6.0);
-
-            // Scale the speed value with accuracy and OD.
-            speedValue *= (0.95 + Math.Pow(attributes.OverallDifficulty, 2) / 750) * Math.Pow((accuracy + relevantAccuracy) / 2.0, (14.5 - Math.Max(attributes.OverallDifficulty, 8)) / 2);
-
-            // Scale the speed value with # of 50s to punish doubletapping.
-            speedValue *= Math.Pow(0.98, countMeh < totalHits / 500.0 ? 0 : countMeh - totalHits / 500.0);
-
             speedValue *= 120.289 / 108 * Math.Pow(SpecialFunctions.Erf(26 / (Math.Sqrt(2) * estimatedSpeedDeviation)), 2);
 
             return speedValue;
@@ -197,7 +186,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (attributes.HitCircleCount == 0)
                 return 0;
 
-            double accuracyValue = 100 * Math.Pow(7.5 / estimatedDeviation, 2);
+            double accuracyValue = 100 * Math.Pow(Math.Pow(estimatedSpeedSkill, 0.75) / 13, 2);
+            // double accuracyValue = 100 * Math.Pow(7.5 / estimatedDeviation, 2);
 
             // Increasing the accuracy value by object count for Blinds isn't ideal, so the minimum buff is given.
             if (score.Mods.Any(m => m is OsuModBlinds))
@@ -238,6 +228,16 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             flashlightValue *= 0.98 + Math.Pow(attributes.OverallDifficulty, 2) / 2500;
 
             return flashlightValue;
+        }
+
+        private double? calculateSpeedSkill(double? deviation, OsuDifficultyAttributes attributes)
+        {
+            if (deviation == null) return null;
+
+            double beta = 3.0;
+            double expectedSpeedDifficulty = Math.Exp(attributes.SpeedParameterMu + Math.Pow(attributes.SpeedParameterSigma, 2) / 2.0);
+
+            return beta * expectedSpeedDifficulty / (double) deviation;
         }
 
         private double? calculateDeviation(OsuDifficultyAttributes attributes)

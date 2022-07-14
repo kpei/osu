@@ -13,6 +13,13 @@ using System.Linq;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
+
+    public struct SpeedParameters {
+        public double mu { get; set; }
+        public double sigma { get; set; }
+
+    }
+
     /// <summary>
     /// Represents the skill required to press keys with regards to keeping up with the speed at which objects need to be hit.
     /// </summary>
@@ -63,6 +70,15 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
                 return 0;
 
             return objectStrains.Aggregate((total, next) => total + (1.0 / (1.0 + Math.Exp(-(next / maxStrain * 12.0 - 6.0)))));
+        }
+   
+        public SpeedParameters getSpeedParameters() {
+            if (objectStrains.Count < 2)
+                return new SpeedParameters { mu = 0, sigma = 0 };
+            
+            double mu = objectStrains.Aggregate((total, next) => total + (next > 0 ? Math.Log(next) : 0)) / objectStrains.Count;
+            double sigma = Math.Sqrt(objectStrains.Aggregate((total, next) => total + (next > 0 ? Math.Pow(Math.Log(next) - mu, 2) : 0)) / (objectStrains.Count - 1));
+            return new SpeedParameters { mu = mu, sigma = sigma };
         }
     }
 }

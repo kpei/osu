@@ -33,6 +33,20 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double SpeedNoteCount { get; set; }
 
         /// <summary>
+        /// The number of clickable objects weighted by difficulty.
+        /// Related to <see cref="SpeedDifficulty"/>
+        /// </summary>
+        [JsonProperty("speed_parameter_mu")]
+        public double SpeedParameterMu { get; set; }
+
+        /// <summary>
+        /// The number of clickable objects weighted by difficulty.
+        /// Related to <see cref="SpeedDifficulty"/>
+        /// </summary>
+        [JsonProperty("speed_parameter_sigma")]
+        public double SpeedParameterSigma { get; set; }
+
+        /// <summary>
         /// The difficulty corresponding to the flashlight skill.
         /// </summary>
         [JsonProperty("flashlight_difficulty")]
@@ -104,6 +118,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             yield return (ATTRIB_ID_SLIDER_FACTOR, SliderFactor);
             yield return (ATTRIB_ID_SPEED_NOTE_COUNT, SpeedNoteCount);
+            yield return (ATTRIB_ID_SPEED_PARAMETER_MU, SpeedParameterMu);
+            yield return (ATTRIB_ID_SPEED_PARAMETER_SIGMA, SpeedParameterSigma);
         }
 
         public override void FromDatabaseAttributes(IReadOnlyDictionary<int, double> values, IBeatmapOnlineInfo onlineInfo)
@@ -119,6 +135,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             FlashlightDifficulty = values.GetValueOrDefault(ATTRIB_ID_FLASHLIGHT);
             SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
             SpeedNoteCount = values[ATTRIB_ID_SPEED_NOTE_COUNT];
+            SpeedParameterMu = values[ATTRIB_ID_SPEED_PARAMETER_MU];
+            SpeedParameterSigma = values[ATTRIB_ID_SPEED_PARAMETER_SIGMA];
 
             DrainRate = onlineInfo.DrainRate;
             HitCircleCount = onlineInfo.CircleCount;
