@@ -1,12 +1,16 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Moq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Screens;
 using osu.Framework.Testing;
@@ -25,9 +29,9 @@ namespace osu.Game.Tests.Visual.UserInterface
     {
         private FirstRunSetupOverlay overlay;
 
-        private readonly Mock<IPerformFromScreenRunner> performer = new Mock<IPerformFromScreenRunner>();
+        private readonly Mock<TestPerformerFromScreenRunner> performer = new Mock<TestPerformerFromScreenRunner>();
 
-        private readonly Mock<INotificationOverlay> notificationOverlay = new Mock<INotificationOverlay>();
+        private readonly Mock<TestNotificationOverlay> notificationOverlay = new Mock<TestNotificationOverlay>();
 
         private Notification lastNotification;
 
@@ -37,8 +41,8 @@ namespace osu.Game.Tests.Visual.UserInterface
         private void load()
         {
             Dependencies.Cache(LocalConfig = new OsuConfigManager(LocalStorage));
-            Dependencies.CacheAs(performer.Object);
-            Dependencies.CacheAs(notificationOverlay.Object);
+            Dependencies.CacheAs<IPerformFromScreenRunner>(performer.Object);
+            Dependencies.CacheAs<INotificationOverlay>(notificationOverlay.Object);
         }
 
         [SetUpSteps]
@@ -50,7 +54,7 @@ namespace osu.Game.Tests.Visual.UserInterface
                 notificationOverlay.Reset();
 
                 performer.Setup(g => g.PerformFromScreen(It.IsAny<Action<IScreen>>(), It.IsAny<IEnumerable<Type>>()))
-                         .Callback((Action<IScreen> action, IEnumerable<Type> types) => action(null));
+                         .Callback((Action<IScreen> action, IEnumerable<Type> _) => action(null));
 
                 notificationOverlay.Setup(n => n.Post(It.IsAny<Notification>()))
                                    .Callback((Notification n) => lastNotification = n);
@@ -66,7 +70,12 @@ namespace osu.Game.Tests.Visual.UserInterface
         }
 
         [Test]
-        [Ignore("Enable when first run setup is being displayed on first run.")]
+        public void TestBasic()
+        {
+            AddAssert("overlay visible", () => overlay.State.Value == Visibility.Visible);
+        }
+
+        [Test]
         public void TestDoesntOpenOnSecondRun()
         {
             AddStep("set first run", () => LocalConfig.SetValue(OsuSetting.ShowFirstRunSetup, true));
@@ -189,6 +198,32 @@ namespace osu.Game.Tests.Visual.UserInterface
 
             AddAssert("overlay shown", () => overlay.State.Value == Visibility.Visible);
             AddAssert("is resumed", () => overlay.CurrentScreen is ScreenUIScale);
+        }
+
+        // interface mocks break hot reload, mocking this stub implementation instead works around it.
+        // see: https://github.com/moq/moq4/issues/1252
+        [UsedImplicitly]
+        public class TestNotificationOverlay : INotificationOverlay
+        {
+            public virtual void Post(Notification notification)
+            {
+            }
+
+            public virtual void Hide()
+            {
+            }
+
+            public virtual IBindable<int> UnreadCount => null;
+        }
+
+        // interface mocks break hot reload, mocking this stub implementation instead works around it.
+        // see: https://github.com/moq/moq4/issues/1252
+        [UsedImplicitly]
+        public class TestPerformerFromScreenRunner : IPerformFromScreenRunner
+        {
+            public virtual void PerformFromScreen(Action<IScreen> action, IEnumerable<Type> validScreens = null)
+            {
+            }
         }
     }
 }

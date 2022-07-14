@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -20,6 +22,10 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
         private SettingsSlider<float> deadzoneSlider;
 
+        private Bindable<float> handlerDeadzone;
+
+        private Bindable<float> localDeadzone;
+
         public JoystickSettings(JoystickHandler joystickHandler)
         {
             this.joystickHandler = joystickHandler;
@@ -28,6 +34,10 @@ namespace osu.Game.Overlays.Settings.Sections.Input
         [BackgroundDependencyLoader]
         private void load()
         {
+            // use local bindable to avoid changing enabled state of game host's bindable.
+            handlerDeadzone = joystickHandler.DeadzoneThreshold.GetBoundCopy();
+            localDeadzone = handlerDeadzone.GetUnboundCopy();
+
             Children = new Drawable[]
             {
                 new SettingsCheckbox
@@ -40,7 +50,7 @@ namespace osu.Game.Overlays.Settings.Sections.Input
                     LabelText = JoystickSettingsStrings.DeadzoneThreshold,
                     KeyboardStep = 0.01f,
                     DisplayAsPercentage = true,
-                    Current = joystickHandler.DeadzoneThreshold,
+                    Current = localDeadzone,
                 },
             };
         }
@@ -51,6 +61,17 @@ namespace osu.Game.Overlays.Settings.Sections.Input
 
             enabled.BindTo(joystickHandler.Enabled);
             enabled.BindValueChanged(e => deadzoneSlider.Current.Disabled = !e.NewValue, true);
+
+            handlerDeadzone.BindValueChanged(val =>
+            {
+                bool disabled = localDeadzone.Disabled;
+
+                localDeadzone.Disabled = false;
+                localDeadzone.Value = val.NewValue;
+                localDeadzone.Disabled = disabled;
+            }, true);
+
+            localDeadzone.BindValueChanged(val => handlerDeadzone.Value = val.NewValue);
         }
     }
 }

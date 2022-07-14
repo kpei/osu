@@ -1,20 +1,23 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable enable
-
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
 using osu.Framework.Screens;
+using osu.Framework.Threading;
 using osu.Game.Configuration;
+using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Input.Bindings;
@@ -24,15 +27,12 @@ using osu.Game.Overlays.Mods;
 using osu.Game.Overlays.Notifications;
 using osu.Game.Screens;
 using osu.Game.Screens.Menu;
-using osu.Game.Screens.OnlinePlay.Match.Components;
 
 namespace osu.Game.Overlays
 {
     [Cached]
     public class FirstRunSetupOverlay : ShearedOverlayContainer
     {
-        protected override OverlayColourScheme ColourScheme => OverlayColourScheme.Purple;
-
         [Resolved]
         private IPerformFromScreenRunner performer { get; set; } = null!;
 
@@ -44,8 +44,8 @@ namespace osu.Game.Overlays
 
         private ScreenStack? stack;
 
-        public PurpleTriangleButton NextButton = null!;
-        public DangerousTriangleButton BackButton = null!;
+        public ShearedButton NextButton = null!;
+        public ShearedButton BackButton = null!;
 
         private readonly Bindable<bool> showFirstRunSetup = new Bindable<bool>();
 
@@ -56,57 +56,82 @@ namespace osu.Game.Overlays
         /// </summary>
         public FirstRunSetupScreen? CurrentScreen => (FirstRunSetupScreen?)stack?.CurrentScreen;
 
-        private readonly FirstRunStep[] steps =
-        {
-            new FirstRunStep(typeof(ScreenWelcome), FirstRunSetupOverlayStrings.WelcomeTitle),
-            new FirstRunStep(typeof(ScreenUIScale), GraphicsSettingsStrings.UIScaling),
-        };
+        private readonly List<Type> steps = new List<Type>();
 
-        private Container stackContainer = null!;
-
-        private Bindable<OverlayActivation>? overlayActivationMode;
+        private Container screenContent = null!;
 
         private Container content = null!;
 
-        [BackgroundDependencyLoader]
-        private void load()
+        private LoadingSpinner loading = null!;
+        private ScheduledDelegate? loadingShowDelegate;
+
+        public FirstRunSetupOverlay()
+            : base(OverlayColourScheme.Purple)
         {
+        }
+
+        [BackgroundDependencyLoader(permitNulls: true)]
+        private void load(OsuColour colours, LegacyImportManager? legacyImportManager)
+        {
+            steps.Add(typeof(ScreenWelcome));
+            steps.Add(typeof(ScreenUIScale));
+            steps.Add(typeof(ScreenBeatmaps));
+            if (legacyImportManager?.SupportsImportFromStable == true)
+                steps.Add(typeof(ScreenImportFromStable));
+            steps.Add(typeof(ScreenBehaviour));
+
             Header.Title = FirstRunSetupOverlayStrings.FirstRunSetupTitle;
             Header.Description = FirstRunSetupOverlayStrings.FirstRunSetupDescription;
 
             MainAreaContent.AddRange(new Drawable[]
             {
-                content = new Container
+                content = new PopoverContainer
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
                     RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding { Horizontal = 50 },
-                    Child = new InputBlockingContainer
+                    Padding = new MarginPadding { Bottom = 20, },
+                    Child = new GridContainer
                     {
-                        Masking = true,
-                        CornerRadius = 14,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
                         RelativeSizeAxes = Axes.Both,
-                        Children = new Drawable[]
+                        ColumnDimensions = new[]
                         {
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Colour = ColourProvider.Background6,
-                            },
-                            stackContainer = new Container
-                            {
-                                Anchor = Anchor.Centre,
-                                Origin = Anchor.Centre,
-                                RelativeSizeAxes = Axes.Both,
-                                Padding = new MarginPadding
-                                {
-                                    Vertical = 20,
-                                    Horizontal = 20,
-                                },
-                            }
+                            new Dimension(),
+                            new Dimension(minSize: 640, maxSize: 800),
+                            new Dimension(),
                         },
-                    },
+                        Content = new[]
+                        {
+                            new[]
+                            {
+                                Empty(),
+                                new InputBlockingContainer
+                                {
+                                    Masking = true,
+                                    CornerRadius = 14,
+                                    RelativeSizeAxes = Axes.Both,
+                                    Children = new Drawable[]
+                                    {
+                                        new Box
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Colour = ColourProvider.Background6,
+                                        },
+                                        loading = new LoadingSpinner(),
+                                        new Container
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                            Padding = new MarginPadding { Vertical = 20 },
+                                            Child = screenContent = new Container { RelativeSizeAxes = Axes.Both, },
+                                        },
+                                    },
+                                },
+                                Empty(),
+                            },
+                        }
+                    }
                 },
             });
 
@@ -114,14 +139,15 @@ namespace osu.Game.Overlays
             {
                 RelativeSizeAxes = Axes.X,
                 AutoSizeAxes = Axes.Y,
-                Width = 0.98f,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
+                Margin = new MarginPadding { Vertical = PADDING },
+                Anchor = Anchor.BottomLeft,
+                Origin = Anchor.BottomLeft,
                 ColumnDimensions = new[]
                 {
-                    new Dimension(GridSizeMode.AutoSize),
                     new Dimension(GridSizeMode.Absolute, 10),
+                    new Dimension(GridSizeMode.AutoSize),
                     new Dimension(),
+                    new Dimension(GridSizeMode.Absolute, 10),
                 },
                 RowDimensions = new[]
                 {
@@ -131,21 +157,25 @@ namespace osu.Game.Overlays
                 {
                     new[]
                     {
-                        BackButton = new DangerousTriangleButton
+                        Empty(),
+                        BackButton = new ShearedButton(300)
                         {
-                            Width = 200,
                             Text = CommonStrings.Back,
                             Action = showPreviousStep,
                             Enabled = { Value = false },
+                            DarkerColour = colours.Pink2,
+                            LighterColour = colours.Pink1,
                         },
-                        Empty(),
-                        NextButton = new PurpleTriangleButton
+                        NextButton = new ShearedButton(0)
                         {
                             RelativeSizeAxes = Axes.X,
                             Width = 1,
                             Text = FirstRunSetupOverlayStrings.GetStarted,
+                            DarkerColour = ColourProvider.Colour2,
+                            LighterColour = ColourProvider.Colour1,
                             Action = showNextStep
-                        }
+                        },
+                        Empty(),
                     },
                 }
             });
@@ -157,8 +187,7 @@ namespace osu.Game.Overlays
 
             config.BindWith(OsuSetting.ShowFirstRunSetup, showFirstRunSetup);
 
-            // TODO: uncomment when happy with the whole flow.
-            // if (showFirstRunSetup.Value) Show();
+            if (showFirstRunSetup.Value) Show();
         }
 
         public override bool OnPressed(KeyBindingPressEvent<GlobalAction> e)
@@ -192,16 +221,9 @@ namespace osu.Game.Overlays
             // if we are valid for display, only do so after reaching the main menu.
             performer.PerformFromScreen(screen =>
             {
-                MainMenu menu = (MainMenu)screen;
-
-                // Eventually I'd like to replace this with a better method that doesn't access the screen.
-                // Either this dialog would be converted to its own screen, or at very least be "hosted" by a screen pushed to the main menu.
-                // Alternatively, another method of disabling notifications could be added to `INotificationOverlay`.
-                if (menu != null)
-                {
-                    overlayActivationMode = menu.OverlayActivationMode.GetBoundCopy();
-                    overlayActivationMode.Value = OverlayActivation.UserTriggered;
-                }
+                // Hides the toolbar for us.
+                if (screen is MainMenu menu)
+                    menu.ReturnToOsuLogo();
 
                 base.Show();
             }, new[] { typeof(MainMenu) });
@@ -223,13 +245,6 @@ namespace osu.Game.Overlays
             base.PopOut();
 
             content.ScaleTo(0.99f, 400, Easing.OutQuint);
-
-            if (overlayActivationMode != null)
-            {
-                // If this is non-null we are guaranteed to have come from the main menu.
-                overlayActivationMode.Value = OverlayActivation.All;
-                overlayActivationMode = null;
-            }
 
             if (currentStepIndex != null)
             {
@@ -255,7 +270,7 @@ namespace osu.Game.Overlays
         {
             Debug.Assert(currentStepIndex == null);
 
-            stackContainer.Child = stack = new ScreenStack
+            screenContent.Child = stack = new ScreenStack
             {
                 RelativeSizeAxes = Axes.Both,
             };
@@ -284,14 +299,22 @@ namespace osu.Game.Overlays
 
             currentStepIndex++;
 
-            if (currentStepIndex < steps.Length)
+            if (currentStepIndex < steps.Count)
             {
-                stack.Push((Screen)Activator.CreateInstance(steps[currentStepIndex.Value].ScreenType));
+                var nextScreen = (Screen)Activator.CreateInstance(steps[currentStepIndex.Value]);
+
+                loadingShowDelegate = Scheduler.AddDelayed(() => loading.Show(), 200);
+                nextScreen.OnLoadComplete += _ =>
+                {
+                    loadingShowDelegate?.Cancel();
+                    loading.Hide();
+                };
+
+                stack.Push(nextScreen);
             }
             else
             {
-                // TODO: uncomment when happy with the whole flow.
-                // showFirstRunSetup.Value = false;
+                showFirstRunSetup.Value = false;
                 currentStepIndex = null;
                 Hide();
             }
@@ -304,23 +327,24 @@ namespace osu.Game.Overlays
             BackButton.Enabled.Value = currentStepIndex > 0;
             NextButton.Enabled.Value = currentStepIndex != null;
 
-            if (currentStepIndex != null)
+            if (currentStepIndex == null)
+                return;
+
+            bool isFirstStep = currentStepIndex == 0;
+            bool isLastStep = currentStepIndex == steps.Count - 1;
+
+            if (isFirstStep)
             {
-                NextButton.Text = currentStepIndex + 1 < steps.Length
-                    ? FirstRunSetupOverlayStrings.Next(steps[currentStepIndex.Value + 1].Description)
-                    : CommonStrings.Finish;
+                BackButton.Text = CommonStrings.Back;
+                NextButton.Text = FirstRunSetupOverlayStrings.GetStarted;
             }
-        }
-
-        private class FirstRunStep
-        {
-            public readonly Type ScreenType;
-            public readonly LocalisableString Description;
-
-            public FirstRunStep(Type screenType, LocalisableString description)
+            else
             {
-                ScreenType = screenType;
-                Description = description;
+                BackButton.Text = LocalisableString.Interpolate($@"{CommonStrings.Back} ({steps[currentStepIndex.Value - 1].GetLocalisableDescription()})");
+
+                NextButton.Text = isLastStep
+                    ? CommonStrings.Finish
+                    : LocalisableString.Interpolate($@"{CommonStrings.Next} ({steps[currentStepIndex.Value + 1].GetLocalisableDescription()})");
             }
         }
     }
