@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics;
-using MathNet.Numerics.Distributions;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
@@ -25,7 +24,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countMiss;
 
         private double effectiveMissCount;
-        private const double fc_probability_threshold = 1 / 15.0;
 
         public OsuPerformanceCalculator()
             : base(new OsuRuleset())
@@ -154,7 +152,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return 0;
             }
 
-            double accuracyValue = 100 * Math.Pow(7.5 / (double)deviation, 2);
+            double accuracyValue = 90 * Math.Pow(7.5 / (double)deviation, 2);
 
             if (score.Mods.Any(m => m is OsuModHidden))
                 accuracyValue *= 1.08;
@@ -197,14 +195,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (attributes.HitCircleCount == 0)
                 return null;
 
-            int greatCountOnCircles = Math.Max(0, countGreat - attributes.SliderCount - attributes.SpinnerCount);
-
-            if (greatCountOnCircles == 0 || attributes.HitCircleCount - countMiss == 0)
-                return null;
-
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
+            double greatProbability = 1 - (countOk + countMeh + countMiss + 1.0) / (attributes.HitCircleCount + 1.0);
 
-            double greatProbability = Beta.InvCDF(greatCountOnCircles, 1 + countOk + countMeh, fc_probability_threshold);
+            if (greatProbability <= 0)
+            {
+                return double.PositiveInfinity;
+            }
+
             double deviation = greatHitWindow / (Math.Sqrt(2) * SpecialFunctions.ErfInv(greatProbability));
 
             return deviation;
