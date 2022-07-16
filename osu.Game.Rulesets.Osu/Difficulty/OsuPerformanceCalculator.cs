@@ -196,7 +196,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return null;
 
             double greatHitWindow = 80 - 6 * attributes.OverallDifficulty;
-            double greatProbability = 1 - (countOk + countMeh + countMiss + 1.0) / (attributes.HitCircleCount + 1.0);
+            double greatProbability = (attributes.HitCircleCount - countOk - countMeh - countMiss) / (attributes.HitCircleCount + 1.0);
 
             if (greatProbability <= 0)
             {
