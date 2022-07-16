@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Audio.Sample;
@@ -9,7 +11,6 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.UserInterface;
-using osu.Framework.Input.Events;
 using osu.Game.Graphics.Containers;
 using osuTK;
 
@@ -82,22 +83,7 @@ namespace osu.Game.Graphics.UserInterface
             return new DrawableOsuMenuItem(item);
         }
 
-        protected override ScrollContainer<Drawable> CreateScrollContainer(Direction direction) => new OsuMenuScrollContainer(direction);
-
-        // Hotfix for https://github.com/ppy/osu/issues/17961
-        public class OsuMenuScrollContainer : OsuScrollContainer
-        {
-            public OsuMenuScrollContainer(Direction direction)
-                : base(direction)
-            {
-            }
-
-            protected override bool OnMouseDown(MouseDownEvent e)
-            {
-                base.OnMouseDown(e);
-                return true;
-            }
-        }
+        protected override ScrollContainer<Drawable> CreateScrollContainer(Direction direction) => new OsuScrollContainer(direction);
 
         protected override Menu CreateSubMenu() => new OsuMenu(Direction.Vertical)
         {

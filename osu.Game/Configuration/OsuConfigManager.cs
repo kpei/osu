@@ -1,9 +1,13 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using osu.Framework.Configuration;
 using osu.Framework.Configuration.Tracking;
 using osu.Framework.Extensions;
@@ -16,6 +20,7 @@ using osu.Game.Input;
 using osu.Game.Input.Bindings;
 using osu.Game.Localisation;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Mods.Input;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Screens.Select;
 using osu.Game.Screens.Select.Filter;
@@ -43,6 +48,7 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.SongSelectSortingMode, SortMode.Title);
 
             SetDefault(OsuSetting.RandomSelectAlgorithm, RandomSelectAlgorithm.RandomPermutation);
+            SetDefault(OsuSetting.ModSelectHotkeyStyle, ModSelectHotkeyStyle.Sequential);
 
             SetDefault(OsuSetting.ChatDisplayHeight, ChatOverlay.DEFAULT_HEIGHT, 0.2f, 1f);
 
@@ -161,7 +167,22 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.DiscordRichPresence, DiscordRichPresenceMode.Full);
 
             SetDefault(OsuSetting.EditorWaveformOpacity, 0.25f);
-            SetDefault(OsuSetting.EditorHitAnimations, false);
+
+            SetDefault(OsuSetting.LastProcessedMetadataId, -1);
+        }
+
+        public IDictionary<OsuSetting, string> GetLoggableState() =>
+            new Dictionary<OsuSetting, string>(ConfigStore.Where(kvp => !keyContainsPrivateInformation(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString()));
+
+        private static bool keyContainsPrivateInformation(OsuSetting argKey)
+        {
+            switch (argKey)
+            {
+                case OsuSetting.Token:
+                    return true;
+            }
+
+            return false;
         }
 
         public OsuConfigManager(Storage storage)
@@ -275,6 +296,8 @@ namespace osu.Game.Configuration
         AlwaysPlayFirstComboBreak,
         FloatingComments,
         HUDVisibilityMode,
+
+        // This has been migrated to the component itself. can be removed 20221027.
         ShowProgressGraph,
         ShowHealthDisplayWhenCantFail,
         FadePlayfieldWhenHealthLow,
@@ -305,6 +328,7 @@ namespace osu.Game.Configuration
         SongSelectGroupingMode,
         SongSelectSortingMode,
         RandomSelectAlgorithm,
+        ModSelectHotkeyStyle,
         ShowFpsDisplay,
         ChatDisplayHeight,
         BeatmapListingCardSize,
@@ -338,9 +362,9 @@ namespace osu.Game.Configuration
         GameplayDisableWinKey,
         SeasonalBackgroundMode,
         EditorWaveformOpacity,
-        EditorHitAnimations,
         DiscordRichPresence,
         AutomaticallyDownloadWhenSpectating,
         ShowOnlineExplicitContent,
+        LastProcessedMetadataId
     }
 }

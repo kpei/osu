@@ -1,7 +1,10 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -31,7 +34,7 @@ namespace osu.Game.Overlays.Settings
         public abstract LocalisableString Header { get; }
 
         public IEnumerable<IFilterable> FilterableChildren => Children.OfType<IFilterable>();
-        public virtual IEnumerable<string> FilterTerms => new[] { Header.ToString() };
+        public virtual IEnumerable<LocalisableString> FilterTerms => new[] { Header };
 
         public const int ITEM_SPACING = 14;
 
@@ -58,7 +61,7 @@ namespace osu.Game.Overlays.Settings
 
         public bool FilteringActive { get; set; }
 
-        [Resolved]
+        [Resolved(canBeNull: true)]
         private SettingsPanel settingsPanel { get; set; }
 
         protected SettingsSection()
@@ -131,7 +134,7 @@ namespace osu.Game.Overlays.Settings
                 },
             });
 
-            selectedSection = settingsPanel.CurrentSection.GetBoundCopy();
+            selectedSection = settingsPanel?.CurrentSection.GetBoundCopy() ?? new Bindable<SettingsSection>(this);
             selectedSection.BindValueChanged(_ => updateContentFade(), true);
         }
 
@@ -152,7 +155,10 @@ namespace osu.Game.Overlays.Settings
         protected override bool OnClick(ClickEvent e)
         {
             if (!isCurrentSection)
+            {
+                Debug.Assert(settingsPanel != null);
                 settingsPanel.SectionsContainer.ScrollTo(this);
+            }
 
             return base.OnClick(e);
         }

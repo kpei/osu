@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Linq;
 using JetBrains.Annotations;
@@ -55,7 +57,21 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
 
         private void onRoomUpdated() => Scheduler.AddOnce(() =>
         {
-            if (countdown != room?.Countdown)
+            MultiplayerCountdown newCountdown;
+
+            switch (room?.Countdown)
+            {
+                case MatchStartCountdown:
+                    newCountdown = room.Countdown;
+                    break;
+
+                // Clear the countdown with any other (including non-null) countdown values.
+                default:
+                    newCountdown = null;
+                    break;
+            }
+
+            if (newCountdown != countdown)
             {
                 countdown = room?.Countdown;
                 countdownChangeTime = Time.Current;
@@ -92,7 +108,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Match
             {
                 updateButtonText();
 
-                int secondsRemaining = countdownTimeRemaining.Seconds;
+                int secondsRemaining = (int)countdownTimeRemaining.TotalSeconds;
 
                 playTickSound(secondsRemaining);
 

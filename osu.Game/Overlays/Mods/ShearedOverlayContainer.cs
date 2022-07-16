@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -51,17 +53,15 @@ namespace osu.Game.Overlays.Mods
         /// </summary>
         protected Container FooterContent { get; private set; }
 
-        protected abstract OverlayColourScheme ColourScheme { get; }
-
         protected override bool StartHidden => true;
 
         protected override bool BlockNonPositionalInput => true;
 
-        protected ShearedOverlayContainer()
+        protected ShearedOverlayContainer(OverlayColourScheme colourScheme)
         {
             RelativeSizeAxes = Axes.Both;
 
-            ColourProvider = new OverlayColourProvider(ColourScheme);
+            ColourProvider = new OverlayColourProvider(colourScheme);
         }
 
         [BackgroundDependencyLoader]

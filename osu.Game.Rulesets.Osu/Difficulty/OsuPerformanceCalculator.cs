@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -206,9 +208,6 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 rawFlashlight = Math.Pow(rawFlashlight, 0.8);
 
             double flashlightValue = Math.Pow(rawFlashlight, 2.0) * 25.0;
-
-            if (score.Mods.Any(h => h is OsuModHidden))
-                flashlightValue *= 1.3;
 
             // Penalize misses by assessing # of misses relative to the total # of objects. Default a 3% reduction for any # of misses.
             if (effectiveMissCount > 0)

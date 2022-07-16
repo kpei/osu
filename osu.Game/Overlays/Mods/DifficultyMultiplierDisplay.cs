@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+#nullable disable
+
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.LocalisationExtensions;
@@ -15,6 +17,7 @@ using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Rulesets.Mods;
 using osuTK;
+using osu.Game.Localisation;
 
 namespace osu.Game.Overlays.Mods
 {
@@ -99,7 +102,7 @@ namespace osu.Game.Overlays.Mods
                                             Origin = Anchor.Centre,
                                             Margin = new MarginPadding { Horizontal = 18 },
                                             Shear = new Vector2(-ShearedOverlayContainer.SHEAR, 0),
-                                            Text = "Difficulty Multiplier",
+                                            Text = DifficultyMultiplierDisplayStrings.DifficultyMultiplier,
                                             Font = OsuFont.Default.With(size: 17, weight: FontWeight.SemiBold)
                                         }
                                     }

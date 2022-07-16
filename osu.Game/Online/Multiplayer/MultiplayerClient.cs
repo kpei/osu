@@ -1,8 +1,6 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -70,9 +68,14 @@ namespace osu.Game.Online.Multiplayer
         public virtual event Action? LoadRequested;
 
         /// <summary>
+        /// Invoked when the multiplayer server requests loading of play to be aborted.
+        /// </summary>
+        public event Action? LoadAborted;
+
+        /// <summary>
         /// Invoked when the multiplayer server requests gameplay to be started.
         /// </summary>
-        public event Action? MatchStarted;
+        public event Action? GameplayStarted;
 
         /// <summary>
         /// Invoked when the multiplayer server has finished collating results.
@@ -192,6 +195,7 @@ namespace osu.Game.Online.Multiplayer
 
                     APIRoom.Playlist.Clear();
                     APIRoom.Playlist.AddRange(joinedRoom.Playlist.Select(createPlaylistItem));
+                    APIRoom.CurrentPlaylistItem.Value = APIRoom.Playlist.Single(item => item.ID == joinedRoom.Settings.PlaylistItemId);
 
                     Debug.Assert(LocalUser != null);
                     addUserToAPIRoom(LocalUser);
@@ -409,7 +413,7 @@ namespace osu.Game.Online.Multiplayer
 
                 UserJoined?.Invoke(user);
                 RoomUpdated?.Invoke();
-            });
+            }, false);
         }
 
         Task IMultiplayerClient.UserLeft(MultiplayerRoomUser user) =>
@@ -604,14 +608,27 @@ namespace osu.Game.Online.Multiplayer
             return Task.CompletedTask;
         }
 
-        Task IMultiplayerClient.MatchStarted()
+        Task IMultiplayerClient.LoadAborted()
         {
             Scheduler.Add(() =>
             {
                 if (Room == null)
                     return;
 
-                MatchStarted?.Invoke();
+                LoadAborted?.Invoke();
+            }, false);
+
+            return Task.CompletedTask;
+        }
+
+        Task IMultiplayerClient.GameplayStarted()
+        {
+            Scheduler.Add(() =>
+            {
+                if (Room == null)
+                    return;
+
+                GameplayStarted?.Invoke();
             }, false);
 
             return Task.CompletedTask;
@@ -719,6 +736,7 @@ namespace osu.Game.Online.Multiplayer
             APIRoom.Type.Value = Room.Settings.MatchType;
             APIRoom.QueueMode.Value = Room.Settings.QueueMode;
             APIRoom.AutoStartDuration.Value = Room.Settings.AutoStartDuration;
+            APIRoom.CurrentPlaylistItem.Value = APIRoom.Playlist.Single(item => item.ID == settings.PlaylistItemId);
 
             RoomUpdated?.Invoke();
         }
