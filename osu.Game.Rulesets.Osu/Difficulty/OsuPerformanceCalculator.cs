@@ -23,8 +23,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countOk;
         private int countMeh;
         private int countMiss;
+        
         private double missPenalty;
-
         private double effectiveMissCount;
 
         public OsuPerformanceCalculator()
@@ -36,6 +36,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             var osuAttributes = (OsuDifficultyAttributes)attributes;
 
+            missPenalty = 1;
             accuracy = score.Accuracy;
             scoreMaxCombo = score.MaxCombo;
             countGreat = score.Statistics.GetValueOrDefault(HitResult.Great);
@@ -283,8 +284,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return skill;
             }
 
+            int effectiveMisses = Math.Min(totalHits, (int) Math.Round(effectiveMissCount));
             double skillToFc = estimateSkillWithSpread(0, totalHits - 1, totalHits, (double) aimDifficultySpread);
-            double skillToMiss = estimateSkillWithSpread(0, (int) Math.Round(effectiveMissCount), totalHits, (double) aimDifficultySpread);
+            double skillToMiss = estimateSkillWithSpread(0, effectiveMisses, totalHits, (double) aimDifficultySpread);
 
             return 1 - skillToMiss / skillToFc;
         }
