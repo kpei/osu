@@ -264,7 +264,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
         private double? calculateSpreadAdjustedMissPenalty(double? aimDifficultySpread)
         {
-            if (aimDifficultySpread is null)
+            if (aimDifficultySpread is null || aimDifficultySpread <= 0)
                 return null;
 
             if (totalHits == 0)

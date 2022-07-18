@@ -110,7 +110,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double meanAimDifficulty = aimDifficulties.Average();
             List<double> relevantAimDifficulties = aimDifficulties.FindAll((difficulty) => difficulty > meanAimDifficulty);
 
-            if (relevantAimDifficulties.Count() < 2) return null;
+            if (relevantAimDifficulties.Count() < 10) return null;
 
             LogNormal ln = LogNormal.Estimate(relevantAimDifficulties);
             return ln.Sigma;
