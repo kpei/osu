@@ -47,6 +47,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (mods.Any(h => h is OsuModRelax))
                 speedRating = 0.0;
 
+            double? aimDifficultySpread = ((Aim) skills[0]).getAimDifficultySpread();
+
             double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(speedRating, 3));
 
             double preempt = IBeatmapDifficultyInfo.DifficultyRange(beatmap.Difficulty.ApproachRate, 1800, 1200, 450) / clockRate;
@@ -71,6 +73,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 HitCircleCount = hitCirclesCount,
                 SliderCount = sliderCount,
                 SpinnerCount = spinnerCount,
+                AimDifficultySpread = aimDifficultySpread,
             };
         }
 

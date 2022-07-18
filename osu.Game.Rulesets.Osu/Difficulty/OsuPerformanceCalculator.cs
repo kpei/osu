@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics;
+using MathNet.Numerics.Distributions;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Scoring;
@@ -22,6 +23,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         private int countOk;
         private int countMeh;
         private int countMiss;
+        private double missPenalty;
 
         private double effectiveMissCount;
 
@@ -57,6 +59,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 Accuracy = accuracyValue,
                 Flashlight = flashlightValue,
                 EffectiveMissCount = effectiveMissCount,
+                MissPenalty = missPenalty,
                 Total = totalValue
             };
         }
@@ -68,11 +71,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             if (totalSuccessfulHits == 0)
                 return 0;
 
-            // Penalize misses. This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
+            // Penalize misses based on the average of two methods: equal hit probability approximation & log-normal order statistics
             if (effectiveMissCount > 0)
             {
+                // This is an approximation of skill level derived from assuming all objects have equal hit probabilities.
+                double baseAimPenalty = calculateBaseMissPenalty();
+                double? spreadBasedAimPenalty = calculateSpreadAdjustedMissPenalty(attributes.AimDifficultySpread);
+
+                missPenalty = baseAimPenalty;
+                if (spreadBasedAimPenalty is not null) {
+                    missPenalty *= 0.5;
+                    missPenalty += 0.5 * (double) spreadBasedAimPenalty;
+                }
+
                 // Since star rating is difficulty^0.829842642, we should raise the miss penalty to this power as well.
-                aimDifficulty *= Math.Pow(calculateMissPenalty(), 0.829842642);
+                aimDifficulty *= Math.Pow(missPenalty, 0.829842642);
             }
 
             double aimValue = Math.Pow(aimDifficulty, 3);
@@ -227,38 +240,75 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         }
 
         /// <summary>
-        /// Imagine a map with n objects, where all objects have equal difficulty d.
-        /// d * sqrt(2) * s(n,0) will return the FC difficulty of that map.
-        /// d * sqrt(2) * s(n,m) will return the m-miss difficulty of that map.
+        /// Applies <see cref="calculateSkillFromMisses"/> to get a basic miss penalty
         /// Since we are given FC difficulty, for a score with m misses, we can obtain
         /// the difficulty for m misses by multiplying the difficulty by s(n,m) / s(n,0).
-        /// Note that the term d * sqrt(2) gets canceled when taking the ratio.
         /// </summary>
-        private double calculateMissPenalty()
+        private double calculateBaseMissPenalty()
         {
             int n = totalHits;
 
             if (n == 0)
                 return 0;
 
-            double s(double m)
+            return calculateSkillFromMisses(n, effectiveMissCount) / calculateSkillFromMisses(n, 0);
+        }
+
+        private double getExpectedDifficultyOfOrder(int order, int totalHits, double difficultySpread)
+        {
+            double alpha = 0.375;
+            double v = (order - alpha) / (totalHits - 2*alpha + 1);
+            return Math.Exp(difficultySpread * Normal.InvCDF(0, 1, v));
+        }
+
+        private double? calculateSpreadAdjustedMissPenalty(double? aimDifficultySpread)
+        {
+            if (aimDifficultySpread is null)
+                return null;
+
+            if (totalHits == 0)
+                return 0;
+            
+            double estimateSkillWithSpread(int from, int to, int totalHits, double difficultySpread, double precision = 1e-3)
             {
-                double y = SpecialFunctions.ErfInv((n - m) / (n + 1));
-                // Derivatives of ErfInv:
-                double y1 = Math.Exp(y * y) * Math.Sqrt(Math.PI) / 2;
-                double y2 = 2 * y * y1 * y1;
-                double y3 = 2 * y1 * (y * y2 + (2 * (y * y) + 1) * (y1 * y1));
-                double y4 = 2 * y1 * (y * y3 + (6 * (y * y) + 3) * y1 * y2 + (4 * (y * y * y) + 6 * y) * (y1 * y1 * y1));
-                // Central moments of Beta distribution:
-                double a = n - m;
-                double b = m + 1;
-                double u2 = a * b / ((a + b) * (a + b) * (a + b + 1));
-                double u3 = 2 * (b - a) * a * b / ((a + b + 2) * (a + b) * (a + b) * (a + b) * (a + b + 1));
-                double u4 = (3 + 6 * ((a - b) * (a + b + 1) - a * b * (a + b + 2)) / (a * b * (a + b + 2) * (a + b + 3))) * (u2 * u2);
-                return Math.Sqrt(2) * (y + 0.5 * y2 * u2 + 1 / 6.0 * y3 * u3 + 1 / 24.0 * y4 * u4);
+                double skill = 0;
+                for (int misses = from; misses < to; misses++) {
+                    double incrementalSkill = calculateSkillFromMisses(totalHits, misses) - calculateSkillFromMisses(totalHits, misses + 1);
+                    double skillFromHit = getExpectedDifficultyOfOrder(totalHits - misses, totalHits, difficultySpread) * incrementalSkill;
+
+                    skill += skillFromHit;
+                    if (skillFromHit < precision) break;
+                }
+
+                return skill;
             }
 
-            return s(effectiveMissCount) / s(0);
+            double skillToFc = estimateSkillWithSpread(0, totalHits - 1, totalHits, (double) aimDifficultySpread);
+            double skillToMiss = estimateSkillWithSpread(0, (int) Math.Round(effectiveMissCount), totalHits, (double) aimDifficultySpread);
+
+            return 1 - skillToMiss / skillToFc;
+        }
+
+        /// <summary>
+        /// Imagine a map with <paramref name="totalHits"/> number of objects, where all hits have equal difficulty d.
+        /// This function [S(n,m)] calculates the total skill required to achieve at most <paramref name="misses"/>.
+        /// For example: S(n, 0) calculates FC difficulty
+        /// </summary>
+        private double calculateSkillFromMisses(double totalHits, double misses)
+        {
+            double y = SpecialFunctions.ErfInv((totalHits - misses) / (totalHits + 1));
+            // Derivatives of ErfInv:
+            double y1 = Math.Exp(y * y) * Math.Sqrt(Math.PI) / 2;
+            double y2 = 2 * y * y1 * y1;
+            double y3 = 2 * y1 * (y * y2 + (2 * (y * y) + 1) * (y1 * y1));
+            double y4 = 2 * y1 * (y * y3 + (6 * (y * y) + 3) * y1 * y2 + (4 * (y * y * y) + 6 * y) * (y1 * y1 * y1));
+            // Central moments of Beta distribution:
+            double a = totalHits - misses;
+            double b = misses + 1;
+            double u2 = a * b / ((a + b) * (a + b) * (a + b + 1));
+            double u3 = 2 * (b - a) * a * b / ((a + b + 2) * (a + b) * (a + b) * (a + b) * (a + b + 1));
+            double u4 = (3 + 6 * ((a - b) * (a + b + 1) - a * b * (a + b + 2)) / (a * b * (a + b + 2) * (a + b + 3))) * (u2 * u2);
+            return Math.Sqrt(2) * (y + 0.5 * y2 * u2 + 1 / 6.0 * y3 * u3 + 1 / 24.0 * y4 * u4);
         }
 
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);

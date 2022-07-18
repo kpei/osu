@@ -41,6 +41,13 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         public double SliderFactor { get; set; }
 
         /// <summary>
+        /// Describes the aggregate spread of log-aim difficulties that creates the <see cref="AimDifficulty"/> skill.
+        /// This difficulty attribute is used to scale misses based on difficulty of the beatmap.
+        /// </summary>
+        [JsonProperty("aim_difficulty_spread")]
+        public double? AimDifficultySpread { get; set; }
+
+        /// <summary>
         /// The perceived approach rate inclusive of rate-adjusting mods (DT/HT/etc).
         /// </summary>
         /// <remarks>
@@ -94,6 +101,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 yield return (ATTRIB_ID_FLASHLIGHT, FlashlightDifficulty);
 
             yield return (ATTRIB_ID_SLIDER_FACTOR, SliderFactor);
+            yield return (ATTRIB_ID_AIM_DIFFICULTY_SPREAD, AimDifficultySpread);
         }
 
         public override void FromDatabaseAttributes(IReadOnlyDictionary<int, double> values)
@@ -108,6 +116,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             StarRating = values[ATTRIB_ID_DIFFICULTY];
             FlashlightDifficulty = values.GetValueOrDefault(ATTRIB_ID_FLASHLIGHT);
             SliderFactor = values[ATTRIB_ID_SLIDER_FACTOR];
+            AimDifficultySpread = values[ATTRIB_ID_AIM_DIFFICULTY_SPREAD];
         }
 
         #region Newtonsoft.Json implicit ShouldSerialize() methods

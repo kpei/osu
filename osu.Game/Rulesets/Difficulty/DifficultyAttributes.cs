@@ -27,6 +27,7 @@ namespace osu.Game.Rulesets.Difficulty
         protected const int ATTRIB_ID_FLASHLIGHT = 17;
         protected const int ATTRIB_ID_SLIDER_FACTOR = 19;
         protected const int ATTRIB_ID_COORDINATION = 21;
+        protected const int ATTRIB_ID_AIM_DIFFICULTY_SPREAD = 23;
 
         /// <summary>
         /// The mods which were applied to the beatmap.

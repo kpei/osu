@@ -103,5 +103,17 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
             double aimSkillLevel = getAimSkillLevel();
             return aimSkillLevel;
         }
+
+        public double? getAimDifficultySpread()
+        {
+            List<double> relevantAimDifficulties = aimDifficulties.FindAll((difficulty) => difficulty > 0);
+
+            if (relevantAimDifficulties.Count() < 2) return null;
+
+            List<double> logAimDifficulties = relevantAimDifficulties.Select((difficulty) => Math.Log(difficulty)).ToList();
+            double averageAimDifficulty = logAimDifficulties.Average();
+            double logAimDifficultyVariance = logAimDifficulties.Aggregate((current, difficulty) => current + Math.Pow(difficulty - averageAimDifficulty, 2));
+            return Math.Sqrt(logAimDifficultyVariance / logAimDifficulties.Count());
+        }
     }
 }
