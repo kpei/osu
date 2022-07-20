@@ -48,6 +48,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedRating = 0.0;
 
             double? aimDifficultySpread = ((Aim) skills[0]).getAimDifficultySpread();
+            double speedNotes = ((Speed)skills[2]).RelevantNoteCount();
 
             double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(speedRating, 3));
 
@@ -65,6 +66,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 Mods = mods,
                 AimDifficulty = aimRating,
                 SpeedDifficulty = speedRating,
+                SpeedNoteCount = speedNotes,
                 FlashlightDifficulty = flashlightRating,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
                 OverallDifficulty = (80 - hitWindowGreat) / 6,
