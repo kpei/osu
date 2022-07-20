@@ -48,7 +48,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 speedRating = 0.0;
 
             double? aimDifficultySpread = ((Aim) skills[0]).getAimDifficultySpread();
-            double speedNotes = ((Speed)skills[2]).RelevantNoteCount();
+            double speedNotes = ((Speed)skills[1]).RelevantNoteCount();
 
             double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(speedRating, 3));
 
