@@ -11,6 +11,7 @@ using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty.Evaluators;
+using osu.Game.Rulesets.Osu.Difficulty.Helpers;
 
 namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 {
@@ -102,6 +103,10 @@ namespace osu.Game.Rulesets.Osu.Difficulty.Skills
 
             double aimSkillLevel = getAimSkillLevel();
             return aimSkillLevel;
+        }
+        
+        public MissPenaltyAttributes getAimMissPenaltyAttributes() {
+            return MissPenaltyHelper.buildMissPenaltyAttributes(aimDifficulties);
         }
     }
 }

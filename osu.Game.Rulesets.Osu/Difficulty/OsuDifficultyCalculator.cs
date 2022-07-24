@@ -11,6 +11,7 @@ using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty.Helpers;
 using osu.Game.Rulesets.Osu.Difficulty.Preprocessing;
 using osu.Game.Rulesets.Osu.Difficulty.Skills;
 using osu.Game.Rulesets.Osu.Mods;
@@ -46,6 +47,8 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             if (mods.Any(h => h is OsuModRelax))
                 speedRating = 0.0;
+
+            MissPenaltyAttributes missPenaltyAttributes = ((Aim) skills[0]).getAimMissPenaltyAttributes();
 
             double starRating = Math.Cbrt(Math.Pow(aimRating, 3) + Math.Pow(speedRating, 3));
 
