@@ -26,6 +26,14 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         [JsonProperty("effective_miss_count")]
         public double EffectiveMissCount { get; set; }
 
+        // @TODO: Remove after balancing
+        [JsonProperty("aim_miss_scaling")]
+        public double AimMissScaling { get; set; }
+
+        [JsonProperty("vanilla_aim_miss_scaling")]
+        public double VanillaAimMissScaling { get; set; }
+
+
         public override IEnumerable<PerformanceDisplayAttribute> GetAttributesForDisplay()
         {
             foreach (var attribute in base.GetAttributesForDisplay())

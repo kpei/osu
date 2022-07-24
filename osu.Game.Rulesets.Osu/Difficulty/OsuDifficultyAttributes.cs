@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using osu.Game.Beatmaps;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
+using osu.Game.Rulesets.Osu.Difficulty.Helpers;
 
 namespace osu.Game.Rulesets.Osu.Difficulty
 {
@@ -37,6 +38,9 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         /// </summary>
         [JsonProperty("flashlight_difficulty")]
         public double FlashlightDifficulty { get; set; }
+
+        [JsonProperty("miss_penalty_attributes")]
+        public MissPenaltyAttributes MissPenaltyAttributes { get; set; }
 
         /// <summary>
         /// Describes how much of <see cref="AimDifficulty"/> is contributed to by hitcircles or sliders.

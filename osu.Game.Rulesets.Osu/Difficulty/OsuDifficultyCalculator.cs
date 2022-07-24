@@ -67,6 +67,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 AimDifficulty = aimRating,
                 SpeedDifficulty = speedRating,
                 FlashlightDifficulty = flashlightRating,
+                MissPenaltyAttributes = missPenaltyAttributes,
                 ApproachRate = preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5,
                 OverallDifficulty = (80 - hitWindowGreat) / 6,
                 DrainRate = drainRate,
