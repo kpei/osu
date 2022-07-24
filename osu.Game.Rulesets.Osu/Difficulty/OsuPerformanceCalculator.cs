@@ -240,12 +240,12 @@ namespace osu.Game.Rulesets.Osu.Difficulty
         {
             if (totalHits == 0) return 0;
 
-            double steadySkillMissPenalty = MissPenaltyHelper.getSteadySkillFromMisses(totalHits, effectiveMissCount) / MissPenaltyHelper.getSteadySkillFromMisses(totalHits, 0);
+            double missScaling = 0.97 * Math.Pow(1 - Math.Pow(effectiveMissCount / totalHits, 0.775), effectiveMissCount);
 
             (double start, double end) convertMissCountToHitRange(int n, double effectiveMissCount) {
                 double miss = effectiveMissCount - 1;
                 double start = Math.Max(0, miss - 0.5);
-                double end = effectiveMissCount <= 1 ? 0.25 : Math.Min(n - 1, miss + 0.5); 
+                double end = Math.Min(n - 1, miss + 0.5); 
                 return (start: start / n, end: end / n);
             }
 
@@ -253,7 +253,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             Beta errorDist = new Beta(attributes.alpha, attributes.beta);
             double difficultyErrorPct = errorDist.CumulativeDistribution(hitRange.end) - errorDist.CumulativeDistribution(hitRange.start);
             
-            return steadySkillMissPenalty + attributes.total * difficultyErrorPct;
+            return missScaling + attributes.total * difficultyErrorPct;
         }
 
         private double getComboScalingFactor(OsuDifficultyAttributes attributes) => attributes.MaxCombo <= 0 ? 1.0 : Math.Min(Math.Pow(scoreMaxCombo, 0.8) / Math.Pow(attributes.MaxCombo, 0.8), 1.0);
