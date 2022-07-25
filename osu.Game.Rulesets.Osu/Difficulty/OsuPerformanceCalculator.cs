@@ -236,12 +236,21 @@ namespace osu.Game.Rulesets.Osu.Difficulty
             return Math.Max(countMiss, comboBasedMissCount);
         }
 
+        /// <summary>
+        /// Estimates the beatmap-specific miss penalty through the use of aim miss penalty attributes.
+        /// The effective miss count is converted into a hit range of (Misses - 0.25, Misses + 0.5).
+        /// The beta density for that range is calculated to determine % error and multiplied by total error
+        /// to get the error estimate.  This estimate is added onto the base miss scaling to get the final
+        /// miss penalty.
+        /// </summary>
         private double calculateMissPenalty(MissPenaltyAttributes attributes)
         {
             if (totalHits == 0) return 0;
 
+            // Get base miss scaling values
             double missScaling = 0.97 * Math.Pow(1 - Math.Pow(effectiveMissCount / totalHits, 0.775), effectiveMissCount);
 
+            // function to convert effective miss count to a range for use in the beta distribution
             (double start, double end) convertMissCountToHitRange(int n, double effectiveMissCount) {
                 double miss = effectiveMissCount - 1;
                 double start = Math.Max(0, miss - 0.25);
@@ -249,6 +258,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
                 return (start: start / n, end: end / n);
             }
 
+            // Convert effective miss count to a range, and calculate difficulty error % from beta cdfs
             (double start, double end) hitRange = convertMissCountToHitRange(totalHits, effectiveMissCount);
             Beta errorDist = new Beta(attributes.alpha, attributes.beta);
             double difficultyErrorPct = errorDist.CumulativeDistribution(hitRange.end) - errorDist.CumulativeDistribution(hitRange.start);
