@@ -244,7 +244,7 @@ namespace osu.Game.Rulesets.Osu.Difficulty
 
             (double start, double end) convertMissCountToHitRange(int n, double effectiveMissCount) {
                 double miss = effectiveMissCount - 1;
-                double start = Math.Max(0, miss - 0.5);
+                double start = Math.Max(0, miss - 0.25);
                 double end = Math.Min(n - 1, miss + 0.5); 
                 return (start: start / n, end: end / n);
             }
